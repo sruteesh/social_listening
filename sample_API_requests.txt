@@ -1,0 +1,40 @@
+When Monitor check box is not checked
+
+
+curl -X POST \
+  http://localhost:9001/run_social_listening \
+  -H 'cache-control: no-cache' \
+  -H 'content-type: application/json' \
+  -d '{
+"keyword":"redmi"
+}'
+
+
+
+When Monitor check box is checked
+
+curl -X POST \
+  http://localhost:9000/run_social_listening_without_monitoring \
+  -H 'cache-control: no-cache' \
+  -H 'content-type: application/json' \
+  -d '{
+	"keyword" : "redmi"
+}'
+
+
+To Subscribe for alerts
+
+curl -X POST \
+  http://localhost:9001/subscribe_alerts \
+  -H 'cache-control: no-cache' \
+  -H 'content-type: application/json' \
+  -d '{
+"keyword":"redmi",
+"alert_keyword":"redmi,xiaomi,china",
+"alert_type":"keyword",
+"media_type":"twitter",
+"recipient" : "sruteeshkumar@gmail.com"
+}'
+
+You can send multiple keywords for alert_keyword (comma seperated)
+All the fileds are needed in order to Send Email Alerts

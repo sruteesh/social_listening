@@ -1,0 +1,32 @@
+Project 1:
+
+Data Extraction 
+Twitter Rest API
+Webhose API for blogs/discussions
+EventRegistry API for news
+
+Data Preprocessing (Internal)
+
+Sentiment Analysis API (Internal)
+Topic Modelling API (Internal)
+Burst Detection API (Internal)
+Drastic Mood Change Detection API (Internal)
+
+Upload to DB API (Internal)
+Dashboard Call Data from DB API (Internal)
+
+Email Alerts API (Internal)
+Report Generation API (Internal)
+
+
+Project 2:
+
+User Lookup across FB, Linkedin, Facebook, Twitter, Google Plus, Pinterest, Gavatar, Youtube
+(https://pipl.com/api/demo)
+
+Tool Stack to be used:
+
+Python for Code Development
+Flask API service for API development
+ElasticSearch Database (NoSQL DB)
+Kibana Dashboard
