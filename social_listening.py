@@ -229,7 +229,6 @@ def get_tweet_info(tweet):
 
 def get_latest_crawl_parameter(keyword,media='blogs'):
     try:
-        path = keyword+'/'+str(date_today)
         if not os.path.exists(path):
             print('No keyword folder found!! Exiting')
             return None
@@ -238,10 +237,11 @@ def get_latest_crawl_parameter(keyword,media='blogs'):
 
             files=[]
             for file in folders:
-                if media in file:
-                    if os.path.getsize(path+'/'+file)>0:
-                        name = int(file.split('_')[-1].strip('.json'))
-                        files.append(name)
+                if '.json' in file:
+                    if media in file:
+                        if os.path.getsize(path+'/'+file)>0:
+                            name = int(file.split('_')[-1].strip('.json'))
+                            files.append(name)
 
             latest_file = str(sorted(files)[-1])
 
@@ -277,7 +277,6 @@ def get_latest_crawl_parameter(keyword,media='blogs'):
 def get_blogs_news(keyword,streaming=True):
 
 
-    path = keyword+'/'+str(date_today)
     if not os.path.exists(path):
         os.makedirs(path)
 
@@ -330,7 +329,6 @@ def get_blogs_news(keyword,streaming=True):
 def get_twitter(keyword,streaming=True):
 
 
-    path = keyword+'/'+str(date_today)
     if not os.path.exists(path):
         os.makedirs(path)
 
@@ -516,17 +514,15 @@ def Master_blogs_function(keyword):
 
     tmp_blogs = get_blogs_news(keyword)
 
-
     try:
         blogs_done_files=[]
-        with open(keyword+"/blogs_done_files"+str(date_today)+'.txt') as fin:
+        with open(path+"/blogs_done_files_"+str(date_today)+'.txt') as fin:
             for line in fin:
                 blogs_done_files.append(line.strip("\n"))
     except Exception as e:
         blogs_done_files = []
 
     #Load Blogs
-    path = keyword+'/'+str(date_today)
     if os.path.exists(path):
         remaining_files= list(set(os.listdir(path)) - set(blogs_done_files))
         if len(remaining_files)>0:
@@ -541,7 +537,7 @@ def Master_blogs_function(keyword):
 
     blogs_done_files = remaining_files
 
-    with open(keyword+"/blogs_done_files"+str(date_today)+'.txt','a') as fin:
+    with open(path+"/blogs_done_files_"+str(date_today)+'.txt','a') as fin:
         for line in blogs_done_files:
             fin.write(line+'\n')
 
@@ -570,10 +566,9 @@ def Master_twitter_function(keyword):
 
     results = get_twitter(keyword)
 
-
     try:
         twitter_done_files=[]
-        with open(keyword+"/twitter_done_files"+str(date_today)+'.txt') as fin:
+        with open(path+"/twitter_done_files_"+str(date_today)+'.txt') as fin:
             for line in fin:
                 twitter_done_files.append(line.strip("\n"))
     except Exception as e:
@@ -582,13 +577,12 @@ def Master_twitter_function(keyword):
 
     # Load Tweets
 
-    path = keyword+'/'+str(date_today)
     if os.path.exists(path):
         remaining_twitter_files= list(set(os.listdir(path)) - set(twitter_done_files))
         if len(remaining_twitter_files)>0:
             twitter=[]
             for file in remaining_twitter_files:
-                if 'twitter' in file:
+                if 'twitter' in file and '.json' in file:
                     with open(path+'/'+file) as fin:
                         for line in fin:
                             line= json.loads(line)
@@ -598,7 +592,7 @@ def Master_twitter_function(keyword):
     twitter_done_files = remaining_twitter_files
 
 
-    with open(keyword+"/twitter_done_files"+str(date_today)+'.txt','a') as fin:
+    with open(path+"/twitter_done_files_"+str(date_today)+'.txt','a') as fin:
         for line in twitter_done_files:
             fin.write(line+'\n')
 
@@ -680,9 +674,12 @@ def run_social_listening():
 
     global date_today
     global date_timestamp
+    global path
 
     date_today = datetime.datetime.today().date()
     date_timestamp = str(datetime.datetime.today().timestamp()).split('.')[0]
+
+    path = "data/" +keyword+'/'+str(date_today)
 
     cleaned_results = Master_blogs_function(keyword)
     cleaned_twitter = Master_twitter_function(keyword)
@@ -690,7 +687,7 @@ def run_social_listening():
     final_result = cleaned_results+cleaned_twitter
     final_df = pd.DataFrame(final_result)
 
-    final_df.to_csv(keyword+'/'+str(date_today)+'/'+keyword+"_all_social_media_"+str(date_today)+".csv",index=False,mode='a')
+    final_df.to_csv(path+'/'+keyword+"_all_social_media_"+str(date_today)+".csv",index=False,mode='a')
 
     print("uploading {} articles to kibana".format(int(final_df.shape[0])))
     Upload_to_kibana(final_result)
@@ -703,9 +700,12 @@ def subscribe_alerts():
 
     global date_today
     global date_timestamp
+    global path
 
     date_today = datetime.datetime.today().date()
     date_timestamp = str(datetime.datetime.today().timestamp()).split('.')[0]
+
+    path = "data/" +keyword+'/'+str(date_today)
 
     try:
         _input = request.get_json(force=True)
@@ -741,7 +741,7 @@ def subscribe_alerts():
         print(e)
 
 
-    final_df = pd.read_csv(keyword+'/'+str(date_today)+'/'+keyword+"_all_social_media_"+str(date_today)+".csv")
+    final_df = pd.read_csv(path+'/'+keyword+"_all_social_media_"+str(date_today)+".csv")
 
 
     final_df['text'] = final_df['text'].apply(lambda x: ast.literal_eval(x))

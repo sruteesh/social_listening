@@ -230,7 +230,6 @@ def get_tweet_info(tweet):
 
 def get_latest_crawl_parameter(keyword,media='blogs'):
     try:
-        path = keyword+'/'+str(date_today)
         if not os.path.exists(path):
             print('No keyword folder found!! Exiting')
             return None
@@ -278,7 +277,6 @@ def get_latest_crawl_parameter(keyword,media='blogs'):
 def get_blogs_news(keyword,streaming=True):
 
 
-    path = "tmp/"+keyword+'/'+str(date_today)
     if not os.path.exists(path):
         os.makedirs(path)
 
@@ -331,7 +329,6 @@ def get_blogs_news(keyword,streaming=True):
 def get_twitter(keyword,streaming=True):
 
 
-    path = "tmp/"+keyword+'/'+str(date_today)
     if not os.path.exists(path):
         os.makedirs(path)
 
@@ -376,7 +373,6 @@ def Master_blogs_function(keyword):
         blogs_done_files = []
 
     #Load Blogs
-    path = "tmp/" + keyword+'/'+str(date_today)
     if os.path.exists(path):
         remaining_files= list(set(os.listdir(path)) - set(blogs_done_files))
         if len(remaining_files)>0:
@@ -424,7 +420,6 @@ def Master_twitter_function(keyword):
 
     # Load Tweets
 
-    path = "tmp/" + keyword+'/'+str(date_today)
     if os.path.exists(path):
         remaining_twitter_files= list(set(os.listdir(path)) - set(twitter_done_files))
         if len(remaining_twitter_files)>0:
@@ -510,6 +505,10 @@ def run_social_listening_without_monitoring():
         print('Keyword not given, EXITING !!')
         sys.exit()
 
+    global path
+
+    path = "tmp/"+keyword+'/'+str(date_today)
+
 
     cleaned_results = Master_blogs_function(keyword)
     cleaned_twitter = Master_twitter_function(keyword)
@@ -517,7 +516,7 @@ def run_social_listening_without_monitoring():
     final_result = cleaned_results+cleaned_twitter
     final_df = pd.DataFrame(final_result)
 
-    final_df.to_csv(keyword+'/'+str(date_today)+'/'+keyword+"_all_social_media_"+str(date_today)+".csv",index=False,mode='a')
+    final_df.to_csv(path+'/'+keyword+"_all_social_media_"+str(date_today)+".csv",index=False,mode='a')
     print("uploading {} articles to kibana".format(int(final_df.shape[0])))
 
     Upload_to_kibana(final_result)
