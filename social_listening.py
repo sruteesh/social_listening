@@ -621,7 +621,7 @@ def Master_twitter_function(keyword):
 
 def Upload_to_kibana(data):
 
-    es = Elasticsearch(host,http_auth=('elastic', 'qwerty'))
+    es = Elasticsearch(host)
     # try :
     #     es.indices.delete(index=index_name, ignore=[400, 404])
     #     print('index deleted')
@@ -690,7 +690,11 @@ def run_social_listening():
     final_df.to_csv(path+'/'+keyword+"_all_social_media_"+str(date_today)+".csv",index=False,mode='a')
 
     print("uploading {} articles to kibana".format(int(final_df.shape[0])))
-    Upload_to_kibana(final_result)
+    
+    try:
+        Upload_to_kibana(final_result)
+    except Exception as e:
+        return jsonify(response=e)
 
     return jsonify(response="Dashboard Built")
 

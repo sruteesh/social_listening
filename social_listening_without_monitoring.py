@@ -454,7 +454,7 @@ def Master_twitter_function(keyword):
 
 def Upload_to_kibana(data):
 
-    es = Elasticsearch(host,http_auth=('elastic', 'qwerty'))
+    es = Elasticsearch(host)
     # try :
     #     es.indices.delete(index=index_name, ignore=[400, 404])
     #     print('index deleted')
