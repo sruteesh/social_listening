@@ -326,6 +326,7 @@ def get_blogs_news(keyword,streaming=True):
     return results
 
 
+
 def get_twitter(keyword,streaming=True):
 
 
@@ -339,23 +340,43 @@ def get_twitter(keyword,streaming=True):
     else:
         latest_crawl_since=None        
         
-        
+    master_results = []
     with open(path+'/'+keyword+"_twitter_"+str(date_today)+'_'+str(date_timestamp)+".json",'w') as fin:
-        results = api.GetSearch(keyword,count=100,result_type='recent',return_json=True,since_id=latest_crawl_since)
-        if len(results['statuses'])>0:
-            json.dump(results['statuses'],fin)
-            fin.write('\n')
-        for i in range(4):
-            try:
+
+        if not latest_crawl_since:
+            for i in range(10):
                 print('getting ', (i+1)*100)
-                results = api.GetSearch(keyword,count=100,result_type='recent',return_json=True,since_id=results['statuses'][0]['id'])
+                results = api.GetSearch(keyword,count=100,result_type='recent',return_json=True,max_id=latest_crawl_since)
                 if len(results['statuses'])>0:
                     json.dump(results['statuses'],fin)
+                    master_results.extend(results['statuses'])
                     fin.write('\n')
-            except Exception as e:
-                print(e)
-                pass
-    return results
+                    latest_crawl_since = results['statuses'][-1]['id']
+
+        else:        
+            results = api.GetSearch(keyword,count=100,result_type='recent',return_json=True,since_id=latest_crawl_since)
+            if len(results['statuses'])>0:
+                json.dump(results['statuses'],fin)
+                master_results.extend(results['statuses'])
+                fin.write('\n')
+
+                for i in range(10):
+                    try:
+                        print('2 getting ', (i+1)*100)
+                        results = api.GetSearch(keyword,count=100,result_type='recent',return_json=True,since_id=results['statuses'][0]['id'])
+                        if len(results['statuses'])>0:
+                            json.dump(results['statuses'],fin)
+                            master_results.extend(results['statuses'])
+                            fin.write('\n')
+                    except Exception as e:
+                        print(e)
+                        if 'out of range' in str(e).lower():
+                            return master_results
+                        else:
+                            print(e)
+                            pass
+    return master_results
+
 
 
 
@@ -455,17 +476,12 @@ def Master_twitter_function(keyword):
 def Upload_to_kibana(data):
 
     es = Elasticsearch(host)
-    # try :
-    #     es.indices.delete(index=index_name, ignore=[400, 404])
-    #     print('index deleted')
-    # except Exception as e:
-    #     print(e)
-    #     pass
-
-    # master_agro_df2['upload_time'] = datetime.datetime.now().isoformat()
-    # master_agro_df2['post_id'] = list(range(len(final_result)))
-    # records=master_agro_df2.where(pd.notnull(master_agro_df2), None).T.to_dict()
-    # list_records=[records[it] for it in records]
+#   try :
+#       es.indices.delete(index=index_name, ignore=[400, 404])
+#       print('index deleted')
+#   except Exception as e:
+#       print(e)
+#       pass
 
     records = data
 

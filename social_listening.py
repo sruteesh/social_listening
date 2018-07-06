@@ -339,23 +339,44 @@ def get_twitter(keyword,streaming=True):
     else:
         latest_crawl_since=None        
         
-        
+    master_results = []
     with open(path+'/'+keyword+"_twitter_"+str(date_today)+'_'+str(date_timestamp)+".json",'w') as fin:
-        results = api.GetSearch(keyword,count=100,result_type='recent',return_json=True,since_id=latest_crawl_since)
-        if len(results['statuses'])>0:
-            json.dump(results['statuses'],fin)
-            fin.write('\n')
-        for i in range(4):
-            try:
+
+        if not latest_crawl_since:
+            for i in range(10):
                 print('getting ', (i+1)*100)
-                results = api.GetSearch(keyword,count=100,result_type='recent',return_json=True,since_id=results['statuses'][0]['id'])
+                results = api.GetSearch(keyword,count=100,result_type='recent',return_json=True,max_id=latest_crawl_since)
                 if len(results['statuses'])>0:
                     json.dump(results['statuses'],fin)
+                    master_results.extend(results['statuses'])
                     fin.write('\n')
-            except Exception as e:
-                print(e)
-                pass
-    return results
+                    latest_crawl_since = results['statuses'][-1]['id']
+
+        else:        
+            results = api.GetSearch(keyword,count=100,result_type='recent',return_json=True,since_id=latest_crawl_since)
+            if len(results['statuses'])>0:
+                json.dump(results['statuses'],fin)
+                master_results.extend(results['statuses'])
+                fin.write('\n')
+
+                for i in range(10):
+                    try:
+                        print('2 getting ', (i+1)*100)
+                        results = api.GetSearch(keyword,count=100,result_type='recent',return_json=True,since_id=results['statuses'][0]['id'])
+                        if len(results['statuses'])>0:
+                            json.dump(results['statuses'],fin)
+                            master_results.extend(results['statuses'])
+                            fin.write('\n')
+                    except Exception as e:
+                        print(e)
+                        if 'out of range' in str(e).lower():
+                            return master_results
+                        else:
+                            print(e)
+                            pass
+    return master_results
+
+
 
 
 def get_subscribed_keyword_posts(type,keywords,final_df):
@@ -615,7 +636,7 @@ def Upload_to_kibana(data):
     actions = [{
         "_index": index_name,
         "_type": doc_type,
-        "_id": 'data_'+str(date_today)+'_'+str(i),
+        "_id": keyword+'_'+str(date_today)+'_'+str(i),
         "_source": j} for i,j in enumerate(records)]
 
     return helpers.bulk(es, actions=actions)
@@ -638,6 +659,8 @@ for i in master_location_coords:
 
 @app.route('/run_social_listening', methods=['POST'])
 def run_social_listening():
+
+    global keyword
 
     try:
         _input = request.get_json(force=True)
@@ -679,20 +702,29 @@ def run_social_listening():
 @app.route('/subscribe_alerts', methods=['POST'])
 def subscribe_alerts():
 
-    global date_today
-    global date_timestamp
-    global path
-
-    date_today = datetime.datetime.today().date()
-    date_timestamp = str(datetime.datetime.today().timestamp()).split('.')[0]
-
-    path = "data/" +keyword+'/'+str(date_today)
-
     try:
-        _input = request.get_json(force=True)
-        print(_input)
 
-        keyword = _input['keyword']
+
+        global keyword
+        
+        try:
+            _input = request.get_json(force=True)
+            print(_input)
+            keyword = _input['keyword']
+        except Exception as e:
+            print(e)
+            print('Keyword not given, EXITING !!')
+            sys.exit()
+            
+        global date_today
+        global date_timestamp
+        global path
+
+        date_today = datetime.datetime.today().date()
+        date_timestamp = str(datetime.datetime.today().timestamp()).split('.')[0]
+
+        path = "data/" +keyword+'/'+str(date_today)
+
 
         if 'alert_type' in _input:
             alert_type = str(_input['alert_type']).lower()
@@ -721,15 +753,19 @@ def subscribe_alerts():
     except Exception as e:
         print(e)
 
+    try:
+        final_df = pd.read_csv(path+'/'+keyword+"_all_social_media_"+str(date_today)+".csv")
 
-    final_df = pd.read_csv(path+'/'+keyword+"_all_social_media_"+str(date_today)+".csv")
 
+        final_df['text'] = final_df['text'].apply(lambda x: ast.literal_eval(x))
+        final_df['entities'] = final_df['entities'].apply(lambda x: ast.literal_eval(x))
+        final_df['location'] = final_df['location'].apply(lambda x: ast.literal_eval(x))
+        final_df['post_metrics'] = final_df['post_metrics'].apply(lambda x: ast.literal_eval(x))
+        final_df['user'] = final_df['user'].apply(lambda x: ast.literal_eval(x))
 
-    final_df['text'] = final_df['text'].apply(lambda x: ast.literal_eval(x))
-    final_df['entities'] = final_df['entities'].apply(lambda x: ast.literal_eval(x))
-    final_df['location'] = final_df['location'].apply(lambda x: ast.literal_eval(x))
-    final_df['post_metrics'] = final_df['post_metrics'].apply(lambda x: ast.literal_eval(x))
-    final_df['user'] = final_df['user'].apply(lambda x: ast.literal_eval(x))
+    except Exception as e:
+        print(e)
+        return jsonify(response="Keyword Not monitored. Add keyword to monitor first")
 
 
     alert_dict = get_subscribed_keyword_posts(alert_type,alert_keywords,final_df)
