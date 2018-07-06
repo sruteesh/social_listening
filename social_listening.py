@@ -31,14 +31,14 @@ import languages_countries_dict
 
 from config import *
 from flask import Flask, jsonify,request
-from flask_cors import CORS
+#from flask_cors import CORS
 
 
 app = Flask(__name__,
             static_url_path='', 
             static_folder='web/static',
             template_folder='web/templates')
-CORS(app)
+#CORS(app)
 
 
 api = twitter.Api(consumer_key=twitter_app_key,
@@ -552,15 +552,6 @@ def Master_blogs_function(keyword):
     return cleaned_results
 
 
-
-# t2 = time.time()
-# cleaned_results=[]
-# for i in blogs_news:
-#     cleaned_results.append(get_post_info(i))
-# time.time()-t2
-
-
-
 def Master_twitter_function(keyword):
 #### Twitter
 
@@ -608,31 +599,16 @@ def Master_twitter_function(keyword):
     return cleaned_twitter
 
 
-# cleaned_twitter=[]
-# for twitter_list in twitter:
-#     try:
-#         for tweet in twitter_list:
-#             cleaned_twitter.append(get_tweet_info(tweet))
-#     except Exception as e:
-#         print(e)
-#         print(twitter_list)
-
-
 
 def Upload_to_kibana(data):
 
     es = Elasticsearch(host)
-    # try :
-    #     es.indices.delete(index=index_name, ignore=[400, 404])
-    #     print('index deleted')
-    # except Exception as e:
-    #     print(e)
-    #     pass
-
-    # master_agro_df2['upload_time'] = datetime.datetime.now().isoformat()
-    # master_agro_df2['post_id'] = list(range(len(final_result)))
-    # records=master_agro_df2.where(pd.notnull(master_agro_df2), None).T.to_dict()
-    # list_records=[records[it] for it in records]
+#    try :
+#        es.indices.delete(index=index_name, ignore=[400, 404])
+#        print('index deleted')
+#    except Exception as e:
+#        print(e)
+#        pass
 
     records = data
 
@@ -690,11 +666,12 @@ def run_social_listening():
     final_df.to_csv(path+'/'+keyword+"_all_social_media_"+str(date_today)+".csv",index=False,mode='a')
 
     print("uploading {} articles to kibana".format(int(final_df.shape[0])))
-    
+
     try:
         Upload_to_kibana(final_result)
     except Exception as e:
-        return jsonify(response=e)
+        print(e)
+        return jsonify(response="Problem in Building Dashboard")
 
     return jsonify(response="Dashboard Built")
 
