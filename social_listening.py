@@ -33,10 +33,6 @@ from config import *
 from flask import Flask, jsonify,request
 #from flask_cors import CORS
 
-from tinydb import TinyDB, Query
-
-
-
 app = Flask(__name__,
             static_url_path='', 
             static_folder='web/static',
@@ -100,20 +96,19 @@ def get_location_coords(location):
                 line = json.loads(line)
                 master_location_coords[line[0]] = line[1]
     except Exception as e:
-        print(e)
+        pass
 
     if location in master_location_coords:
         return master_location_coords[location]
-    elif location is not None or len(location)<3:
+    elif location is not None and len(location)<3:
         with open("./master_location_coords.json",'a') as fin:
             try:
                 print(location)
                 geocode_result = gmaps.geocode(location)
                 _dict = geocode_result[0]['geometry']['location']
-                # master_location_coords[location] = (_dict['lat'],_dict['lng'])
-                json.dump((line,(_dict['lng'],_dict['lat'])),fin)
+                json.dump((location,(_dict['lat'],_dict['lng'])),fin)
                 fin.write("\n")
-                return (_dict['lng'],_dict['lat'])
+                return (_dict['lat'],_dict['lng'])
             except Exception as e:
                 print(location)
                 print(e)
@@ -225,7 +220,7 @@ def get_post_info(post):
 def get_tweet_info(tweet):
 
     selected_info = defaultdict(dict)
-    selected_info['id'] = tweet['id']
+    selected_info['id'] = str(tweet['id'])
     selected_info['source_category'] = 'twitter'
     selected_info['domain'] = [tweet['entities']['urls'][0]['display_url'].split('/')[0].lower() if len(tweet['entities']['urls'])>0 else None][0]
     selected_info['domain_full'] = selected_info['domain']
