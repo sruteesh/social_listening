@@ -62,10 +62,15 @@ def get_key(_string):
 
 alerts_password = get_key(password_encr)
  
-# #Declare our database variable and the file to store our data in
-# master_location_coords = TinyDB('master_location_coords.json')
-# Search=Query()
+from multiprocessing import Process,Manager
 
+m = Manager()
+master_locations = m.dict()
+
+
+# #Declare our database variable and the file to store our data in
+# master_location_coords = TinyDB('master_location_coords_tinydb.json')
+# Search=Query()
 
 # def get_location_coords(location):
 #     result = master_location_coords.search(Search.location==location)
@@ -76,7 +81,7 @@ alerts_password = get_key(password_encr)
 #             print(location)
 #             geocode_result = gmaps.geocode(location)
 #             _dict = geocode_result[0]['geometry']['location']
-#             master_location_coords.insert({"location":location, "lat":_dict['lat'],"lng":_dict['lng']})
+#             master_locations[location] = (_dict['lat'],_dict['lng'])
 #             return (_dict['lat'],_dict['lng'])
 #         except Exception as e:
 #             print(location)
@@ -85,27 +90,34 @@ alerts_password = get_key(password_encr)
 #     else:
 #         return None
 
-# from multiprocessing import Process,Manager
 
-# m = Manager()
-# master_locations = m.dict()
-
-master_location_coords=defaultdict(list)
 def get_location_coords(location):
+
+    master_location_coords = defaultdict(list)
+    try:
+        with open("./master_location_coords.json") as fout:
+            for line in fout:
+                line = json.loads(line)
+                master_location_coords[line[0]] = line[1]
+    except Exception as e:
+        print(e)
 
     if location in master_location_coords:
         return master_location_coords[location]
-    elif location is not None:
-        try:
-            print(location)
-            geocode_result = gmaps.geocode(location)
-            _dict = geocode_result[0]['geometry']['location']
-            master_location_coords[location] = (_dict['lat'],_dict['lng'])
-            return (_dict['lng'],_dict['lat'])
-        except Exception as e:
-            print(location)
-            print(e)
-            return None
+    elif location is not None or len(location)<3:
+        with open("./master_location_coords.json",'a') as fin:
+            try:
+                print(location)
+                geocode_result = gmaps.geocode(location)
+                _dict = geocode_result[0]['geometry']['location']
+                # master_location_coords[location] = (_dict['lat'],_dict['lng'])
+                json.dump((line,(_dict['lng'],_dict['lat'])),fin)
+                fin.write("\n")
+                return (_dict['lng'],_dict['lat'])
+            except Exception as e:
+                print(location)
+                print(e)
+                return None
     else:
         return None
 
@@ -388,8 +400,8 @@ def get_twitter(keyword,streaming=True):
                         json.dump(results['statuses'],fin)
                         master_results.extend(results['statuses'])
                         fin.write('\n')
-                        latest_crawl_since = results['statuses'][-1]['id']
                         prvs_crawl_since = latest_crawl_since
+                        latest_crawl_since = results['statuses'][-1]['id']
 
         else:        
             results = api.GetSearch(keyword,count=100,result_type='recent',return_json=True,since_id=latest_crawl_since)
@@ -735,6 +747,12 @@ def run_social_listening():
     final_df = pd.DataFrame(final_result)
 
     final_df.to_csv(path+'/'+keyword+"_all_social_media_"+str(date_today)+".csv",index=False,mode='a')
+
+
+    # master_location_coords_dict = dict(master_locations)
+
+    # for i in master_location_coords_dict:
+    #     master_location_coords.insert({"location":i,"lat":master_location_coords_dict[i][0],"lng":master_location_coords_dict[i][1]})
 
 
     # with open("./master_location_coords.json",'a') as fin:
