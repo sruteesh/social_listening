@@ -33,6 +33,9 @@ from config import *
 from flask import Flask, jsonify,request
 #from flask_cors import CORS
 
+from tinydb import TinyDB, Query
+
+
 
 app = Flask(__name__,
             static_url_path='', 
@@ -58,17 +61,47 @@ def get_key(_string):
 
 
 alerts_password = get_key(password_encr)
+ 
+# #Declare our database variable and the file to store our data in
+# master_location_coords = TinyDB('master_location_coords.json')
+# Search=Query()
+
+
+# def get_location_coords(location):
+#     result = master_location_coords.search(Search.location==location)
+#     if len(result) >0:
+#         return (result[0]['lat'],result[0]['lng'])
+#     elif location is not None:
+#         try:
+#             print(location)
+#             geocode_result = gmaps.geocode(location)
+#             _dict = geocode_result[0]['geometry']['location']
+#             master_location_coords.insert({"location":location, "lat":_dict['lat'],"lng":_dict['lng']})
+#             return (_dict['lat'],_dict['lng'])
+#         except Exception as e:
+#             print(location)
+#             print(e)
+#             return None
+#     else:
+#         return None
+
+# from multiprocessing import Process,Manager
+
+# m = Manager()
+# master_locations = m.dict()
 
 master_location_coords=defaultdict(list)
 def get_location_coords(location):
+
     if location in master_location_coords:
         return master_location_coords[location]
     elif location is not None:
         try:
+            print(location)
             geocode_result = gmaps.geocode(location)
             _dict = geocode_result[0]['geometry']['location']
             master_location_coords[location] = (_dict['lat'],_dict['lng'])
-            return (_dict['lat'],_dict['lng'])
+            return (_dict['lng'],_dict['lat'])
         except Exception as e:
             print(location)
             print(e)
@@ -178,6 +211,7 @@ def get_post_info(post):
 
 
 def get_tweet_info(tweet):
+
     selected_info = defaultdict(dict)
     selected_info['id'] = tweet['id']
     selected_info['source_category'] = 'twitter'
@@ -340,17 +374,22 @@ def get_twitter(keyword,streaming=True):
         latest_crawl_since=None        
         
     master_results = []
+    prvs_crawl_since = -1
     with open(path+'/'+keyword+"_twitter_"+str(date_today)+'_'+str(date_timestamp)+".json",'w') as fin:
 
         if not latest_crawl_since:
             for i in range(10):
                 print('getting ', (i+1)*100)
-                results = api.GetSearch(keyword,count=100,result_type='recent',return_json=True,max_id=latest_crawl_since)
-                if len(results['statuses'])>0:
-                    json.dump(results['statuses'],fin)
-                    master_results.extend(results['statuses'])
-                    fin.write('\n')
-                    latest_crawl_since = results['statuses'][-1]['id']
+                if prvs_crawl_since==latest_crawl_since:
+                    return master_results
+                else:
+                    results = api.GetSearch(keyword,count=100,result_type='recent',return_json=True,max_id=latest_crawl_since)
+                    if len(results['statuses'])>0:
+                        json.dump(results['statuses'],fin)
+                        master_results.extend(results['statuses'])
+                        fin.write('\n')
+                        latest_crawl_since = results['statuses'][-1]['id']
+                        prvs_crawl_since = latest_crawl_since
 
         else:        
             results = api.GetSearch(keyword,count=100,result_type='recent',return_json=True,since_id=latest_crawl_since)
@@ -567,8 +606,14 @@ def Master_blogs_function(keyword):
     t1 = time.time()
     cleaned_results = []
     blogs_multiprocess_pool = [p.apply_async(get_post_info, [i]) for i in blogs_news]
-    for result in blogs_multiprocess_pool:
-        cleaned_results.append(result.get())
+    for i,result in enumerate(blogs_multiprocess_pool):
+        try:
+            cleaned_results.append(result.get())
+        except Exception as e:
+            print("BLOGS EXCEPTION!!",e)
+            print('Error on line {}'.format(sys.exc_info()[-1].tb_lineno), type(e).__name__, e)
+
+            pass
 
     return cleaned_results
 
@@ -613,9 +658,16 @@ def Master_twitter_function(keyword):
     t1 = time.time()
     cleaned_twitter = []
     tweets = [tweet for tweet in sum(twitter,[])]
-    blogs_multiprocess_pool = [p.apply_async(get_tweet_info, [i]) for i in tweets]
-    for result in blogs_multiprocess_pool:
-        cleaned_twitter.append(result.get())
+
+
+    tweets_multiprocess_pool = [p.apply_async(get_tweet_info, [i]) for i in tweets]
+
+    for i,result in enumerate(tweets_multiprocess_pool):
+        try:
+            cleaned_twitter.append(result.get())
+        except Exception as e:
+            print("TWITTER EXCEPTION!!",e)
+            print('Error on line {}'.format(sys.exc_info()[-1].tb_lineno), type(e).__name__, e)
 
     return cleaned_twitter
 
@@ -650,13 +702,6 @@ p = Pool(initializer=pool_init, processes = num_processes)
 
 
 
-
-for i in master_location_coords:
-    val = master_location_coords[i]
-    master_location_coords[i] = (val[1],val[0])
-
-
-
 @app.route('/run_social_listening', methods=['POST'])
 def run_social_listening():
 
@@ -671,9 +716,12 @@ def run_social_listening():
         print('Keyword not given, EXITING !!')
         sys.exit()
 
+
     global date_today
     global date_timestamp
     global path
+    global master_locations_coords
+    global master_locations
 
     date_today = datetime.datetime.today().date()
     date_timestamp = str(datetime.datetime.today().timestamp()).split('.')[0]
@@ -687,6 +735,13 @@ def run_social_listening():
     final_df = pd.DataFrame(final_result)
 
     final_df.to_csv(path+'/'+keyword+"_all_social_media_"+str(date_today)+".csv",index=False,mode='a')
+
+
+    # with open("./master_location_coords.json",'a') as fin:
+    #     for line in master_location_coords:
+    #         json.dump((line,master_location_coords[line]),fin)
+    #         fin.write("\n")
+
 
     print("uploading {} articles to kibana".format(int(final_df.shape[0])))
 
@@ -719,6 +774,7 @@ def subscribe_alerts():
         global date_today
         global date_timestamp
         global path
+
 
         date_today = datetime.datetime.today().date()
         date_timestamp = str(datetime.datetime.today().timestamp()).split('.')[0]
@@ -786,5 +842,16 @@ def subscribe_alerts():
 
 
 if __name__ == '__main__':
+
+    # master_location_coords = defaultdict(list)
+    # try:
+    #     with open("./master_location_coords.json") as fout:
+    #         for line in fout:
+    #             line = json.loads(line)
+    #             master_location_coords[line[0]] = line[1]
+    # except Exception as e:
+    #     print(e)
+
+
     app.run(debug=True,port=9001,host="0.0.0.0")
 

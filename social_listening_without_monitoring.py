@@ -57,8 +57,19 @@ date_timestamp = str(datetime.datetime.today().timestamp()).split('.')[0]
 language_dict = dict(languages_countries_dict.languages)
 countries_dict = dict(languages_countries_dict.countries)
 
+global master_location_coords
 
-master_location_coords=defaultdict(list)
+
+master_location_coords = defaultdict(list)
+try:
+    with open("./master_location_coords.json") as fout:
+        for line in fout:
+            line = json.loads(line)
+            master_location_coords[line[0]] = line[1]
+except Exception as e:
+    print(e)
+
+
 def get_location_coords(location):
     if location in master_location_coords:
         return master_location_coords[location]
@@ -501,6 +512,12 @@ def pool_init():
 p = Pool(initializer=pool_init, processes = num_processes)
 
 
+
+
+with open("./master_location_coords.json",'a') as fin:
+    for line in master_location_coords:
+        json.dump((line,master_location_coords[line]),fin)
+        fin.write("\n")
 
 
 for i in master_location_coords:
