@@ -87,34 +87,56 @@ master_locations = m.dict()
 #         return None
 
 
+# def get_location_coords(location):
+
+#     master_location_coords = defaultdict(list)
+#     try:
+#         with open("./master_location_coords.json") as fout:
+#             for line in fout:
+#                 line = json.loads(line)
+#                 master_location_coords[line[0]] = line[1]
+#     except Exception as e:
+#         pass
+
+#     if location in master_location_coords:
+#         return master_location_coords[location]
+#     elif location is not None and len(location)<3:
+#         with open("./master_location_coords.json",'a') as fin:
+#             try:
+#                 print(location)
+#                 geocode_result = gmaps.geocode(location)
+#                 _dict = geocode_result[0]['geometry']['location']
+#                 json.dump((location,(_dict['lat'],_dict['lng'])),fin)
+#                 fin.write("\n")
+#                 return (_dict['lat'],_dict['lng'])
+#             except Exception as e:
+#                 print(location)
+#                 print(e)
+#                 return None
+#     else:
+#         return None
+
+
 def get_location_coords(location):
 
     master_location_coords = defaultdict(list)
-    try:
-        with open("./master_location_coords.json") as fout:
-            for line in fout:
-                line = json.loads(line)
-                master_location_coords[line[0]] = line[1]
-    except Exception as e:
-        pass
+
 
     if location in master_location_coords:
         return master_location_coords[location]
     elif location is not None and len(location)<3:
-        with open("./master_location_coords.json",'a') as fin:
-            try:
-                print(location)
-                geocode_result = gmaps.geocode(location)
-                _dict = geocode_result[0]['geometry']['location']
-                json.dump((location,(_dict['lat'],_dict['lng'])),fin)
-                fin.write("\n")
-                return (_dict['lat'],_dict['lng'])
-            except Exception as e:
-                print(location)
-                print(e)
-                return None
+        try:
+            print(location)
+            geocode_result = gmaps.geocode(location)
+            _dict = geocode_result[0]['geometry']['location']
+            return (_dict['lat'],_dict['lng'])
+        except Exception as e:
+            print(location)
+            print(e)
+            return None
     else:
         return None
+
 
 
 
