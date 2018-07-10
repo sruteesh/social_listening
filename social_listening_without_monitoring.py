@@ -57,19 +57,6 @@ date_timestamp = str(datetime.datetime.today().timestamp()).split('.')[0]
 language_dict = dict(languages_countries_dict.languages)
 countries_dict = dict(languages_countries_dict.countries)
 
-global master_location_coords
-
-
-master_location_coords = defaultdict(list)
-try:
-    with open("./master_location_coords.json") as fout:
-        for line in fout:
-            line = json.loads(line)
-            master_location_coords[line[0]] = line[1]
-except Exception as e:
-    print(e)
-
-
 def get_location_coords(location):
 
     master_location_coords = defaultdict(list)
@@ -83,13 +70,12 @@ def get_location_coords(location):
 
     if location in master_location_coords:
         return master_location_coords[location]
-    elif location is not None and len(location)<3:
+    elif location is not None and len(location)>3:
         with open("./master_location_coords.json",'a') as fin:
             try:
                 print(location)
                 geocode_result = gmaps.geocode(location)
                 _dict = geocode_result[0]['geometry']['location']
-                # master_location_coords[location] = (_dict['lat'],_dict['lng'])
                 json.dump((location,(_dict['lng'],_dict['lat'])),fin)
                 fin.write("\n")
                 return (_dict['lng'],_dict['lat'])
@@ -364,17 +350,22 @@ def get_twitter(keyword,streaming=True):
         latest_crawl_since=None        
         
     master_results = []
+    prvs_crawl_since = -1
     with open(path+'/'+keyword+"_twitter_"+str(date_today)+'_'+str(date_timestamp)+".json",'w') as fin:
 
         if not latest_crawl_since:
             for i in range(10):
                 print('getting ', (i+1)*100)
-                results = api.GetSearch(keyword,count=100,result_type='recent',return_json=True,max_id=latest_crawl_since)
-                if len(results['statuses'])>0:
-                    json.dump(results['statuses'],fin)
-                    master_results.extend(results['statuses'])
-                    fin.write('\n')
-                    latest_crawl_since = results['statuses'][-1]['id']
+                if prvs_crawl_since==latest_crawl_since:
+                    return master_results
+                else:
+                    results = api.GetSearch(keyword,count=100,result_type='recent',return_json=True,max_id=latest_crawl_since)
+                    if len(results['statuses'])>0:
+                        json.dump(results['statuses'],fin)
+                        master_results.extend(results['statuses'])
+                        fin.write('\n')
+                        prvs_crawl_since = latest_crawl_since
+                        latest_crawl_since = results['statuses'][-1]['id']
 
         else:        
             results = api.GetSearch(keyword,count=100,result_type='recent',return_json=True,since_id=latest_crawl_since)
@@ -401,16 +392,13 @@ def get_twitter(keyword,streaming=True):
     return master_results
 
 
-
-
 def Master_blogs_function(keyword):
 
     tmp_blogs = get_blogs_news(keyword)
 
-
     try:
         blogs_done_files=[]
-        with open(keyword+"/blogs_done_files"+str(date_today)+'.txt') as fin:
+        with open(path+"/blogs_done_files_"+str(date_today)+'.txt') as fin:
             for line in fin:
                 blogs_done_files.append(line.strip("\n"))
     except Exception as e:
@@ -431,7 +419,7 @@ def Master_blogs_function(keyword):
 
     blogs_done_files = remaining_files
 
-    with open("tmp/" + keyword+"/blogs_done_files"+str(date_today)+'.txt','a') as fin:
+    with open(path+"/blogs_done_files_"+str(date_today)+'.txt','a') as fin:
         for line in blogs_done_files:
             fin.write(line+'\n')
 
@@ -440,8 +428,16 @@ def Master_blogs_function(keyword):
     t1 = time.time()
     cleaned_results = []
     blogs_multiprocess_pool = [p.apply_async(get_post_info, [i]) for i in blogs_news]
-    for result in blogs_multiprocess_pool:
-        cleaned_results.append(result.get())
+    for i,result in enumerate(blogs_multiprocess_pool):
+        try:
+            output = result.get()
+            output['keyword'] = keyword
+            cleaned_results.append(output)
+        except Exception as e:
+            print("BLOGS EXCEPTION!!",e)
+            print('Error on line {}'.format(sys.exc_info()[-1].tb_lineno), type(e).__name__, e)
+
+            pass
 
     return cleaned_results
 
@@ -452,10 +448,9 @@ def Master_twitter_function(keyword):
 
     results = get_twitter(keyword)
 
-
     try:
         twitter_done_files=[]
-        with open(keyword+"/twitter_done_files"+str(date_today)+'.txt') as fin:
+        with open(path+"/twitter_done_files_"+str(date_today)+'.txt') as fin:
             for line in fin:
                 twitter_done_files.append(line.strip("\n"))
     except Exception as e:
@@ -469,7 +464,7 @@ def Master_twitter_function(keyword):
         if len(remaining_twitter_files)>0:
             twitter=[]
             for file in remaining_twitter_files:
-                if 'twitter' in file:
+                if 'twitter' in file and '.json' in file:
                     with open(path+'/'+file) as fin:
                         for line in fin:
                             line= json.loads(line)
@@ -479,7 +474,7 @@ def Master_twitter_function(keyword):
     twitter_done_files = remaining_twitter_files
 
 
-    with open("tmp/" + keyword+"/twitter_done_files"+str(date_today)+'.txt','a') as fin:
+    with open(path+"/twitter_done_files_"+str(date_today)+'.txt','a') as fin:
         for line in twitter_done_files:
             fin.write(line+'\n')
 
@@ -488,12 +483,20 @@ def Master_twitter_function(keyword):
     t1 = time.time()
     cleaned_twitter = []
     tweets = [tweet for tweet in sum(twitter,[])]
-    blogs_multiprocess_pool = [p.apply_async(get_tweet_info, [i]) for i in tweets]
-    for result in blogs_multiprocess_pool:
-        cleaned_twitter.append(result.get())
+
+
+    tweets_multiprocess_pool = [p.apply_async(get_tweet_info, [i]) for i in tweets]
+
+    for i,result in enumerate(tweets_multiprocess_pool):
+        try:
+            output = result.get()
+            output['keyword'] = keyword
+            cleaned_twitter.append(output)
+        except Exception as e:
+            print("TWITTER EXCEPTION!!",e)
+            print('Error on line {}'.format(sys.exc_info()[-1].tb_lineno), type(e).__name__, e)
 
     return cleaned_twitter
-
 
 
 def Upload_to_kibana(data):
@@ -551,9 +554,13 @@ def run_social_listening_without_monitoring():
     final_df.to_csv(path+'/'+keyword+"_all_social_media_"+str(date_today)+".csv",index=False,mode='a')
     print("uploading {} articles to kibana".format(int(final_df.shape[0])))
 
-    Upload_to_kibana(final_result)
-    return jsonify(response="Dashboard Built")
+    try:
+        Upload_to_kibana(final_result)
+    except Exception as e:
+        print(e)
+        return jsonify(response="Problem in Building Dashboard",url=None)
 
+    return jsonify(response="Dashboard Built",url = "http://185.90.51.142:5601/app/kibana#/dashboard/0ac89420-5287-11e8-8ab0-3f731bc5c361?_g=(refreshInterval:(display:Off,pause:!f,value:0),time:(from:now-6M,mode:quick,to:now))&_a=(description:'',filters:!(('$state':(store:appState),meta:(alias:!n,disabled:!f,index:'663c8a20-8115-11e8-ba2e-69a0a3013ee4',key:keyword.keyword,negate:!f,params:(query:{},type:phrase),type:phrase,value:{}),query:(match:(keyword.keyword:(query:{},type:phrase))))),fullScreenMode:!t,options:(darkTheme:!f,hidePanelTitles:!f,useMargins:!t),panels:!((gridData:(h:20,i:'1',w:48,x:0,y:115),id:'07b340d0-5266-11e8-bada-23eb8c6d65ff',panelIndex:'1',type:visualization,version:'6.3.0'),(gridData:(h:15,i:'2',w:48,x:0,y:15),id:c2c82ac0-5266-11e8-bada-23eb8c6d65ff,panelIndex:'2',type:visualization,version:'6.3.0'),(embeddableConfig:(vis:(params:(sort:(columnIndex:0,direction:desc)))),gridData:(h:20,i:'3',w:48,x:0,y:45),id:'9f905be0-5266-11e8-bada-23eb8c6d65ff',panelIndex:'3',type:visualization,version:'6.3.0'),(gridData:(h:30,i:'5',w:24,x:24,y:65),id:e191b1f0-5285-11e8-8ab0-3f731bc5c361,panelIndex:'5',type:visualization,version:'6.3.0'),(embeddableConfig:(vis:(legendOpen:!f)),gridData:(h:15,i:'6',w:32,x:0,y:30),id:'35836920-5286-11e8-8ab0-3f731bc5c361',panelIndex:'6',type:visualization,version:'6.3.0'),(gridData:(h:20,i:'7',w:24,x:24,y:95),id:b9233360-5285-11e8-8ab0-3f731bc5c361,panelIndex:'7',type:visualization,version:'6.3.0'),(gridData:(h:15,i:'8',w:16,x:32,y:30),id:'74e71770-5285-11e8-8ab0-3f731bc5c361',panelIndex:'8',type:visualization,version:'6.3.0'),(embeddableConfig:(vis:(legendOpen:!f)),gridData:(h:20,i:'9',w:24,x:0,y:65),id:'628886d0-5286-11e8-8ab0-3f731bc5c361',panelIndex:'9',type:visualization,version:'6.3.0'),(embeddableConfig:(vis:(legendOpen:!f)),gridData:(h:30,i:'10',w:24,x:0,y:85),id:'0d23deb0-5286-11e8-8ab0-3f731bc5c361',panelIndex:'10',type:visualization,version:'6.3.0'),(gridData:(h:6,i:'11',w:48,x:0,y:0),id:'783916b0-5287-11e8-8ab0-3f731bc5c361',panelIndex:'11',type:visualization,version:'6.3.0'),(embeddableConfig:(),gridData:(h:9,i:'12',w:48,x:0,y:6),id:'871fdd10-8407-11e8-ba2e-69a0a3013ee4',panelIndex:'12',type:visualization,version:'6.3.0')),query:(language:lucene,query:''),timeRestore:!t,title:social_media_analysis,viewMode:edit)".format(keyword,keyword,keyword))
 
 
 
