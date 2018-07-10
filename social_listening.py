@@ -106,9 +106,9 @@ def get_location_coords(location):
                 print(location)
                 geocode_result = gmaps.geocode(location)
                 _dict = geocode_result[0]['geometry']['location']
-                json.dump((location,(_dict['lat'],_dict['lng'])),fin)
+                json.dump((location,(_dict['lng'],_dict['lat'])),fin)
                 fin.write("\n")
-                return (_dict['lat'],_dict['lng'])
+                return (_dict['lng'],_dict['lat'])
             except Exception as e:
                 print(location)
                 print(e)
@@ -707,12 +707,13 @@ def Master_twitter_function(keyword):
 def Upload_to_kibana(data):
 
     es = Elasticsearch(host)
-#    try :
-#        es.indices.delete(index=index_name, ignore=[400, 404])
-#        print('index deleted')
-#    except Exception as e:
-#        print(e)
-#        pass
+    
+    try :
+       es.indices.delete(index=index_name, ignore=[400, 404])
+       print('index deleted')
+    except Exception as e:
+       print(e)
+       pass
 
     records = data
 
