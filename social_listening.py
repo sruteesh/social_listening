@@ -87,55 +87,53 @@ master_locations = m.dict()
 #         return None
 
 
-# def get_location_coords(location):
-
-#     master_location_coords = defaultdict(list)
-#     try:
-#         with open("./master_location_coords.json") as fout:
-#             for line in fout:
-#                 line = json.loads(line)
-#                 master_location_coords[line[0]] = line[1]
-#     except Exception as e:
-#         pass
-
-#     if location in master_location_coords:
-#         return master_location_coords[location]
-#     elif location is not None and len(location)<3:
-#         with open("./master_location_coords.json",'a') as fin:
-#             try:
-#                 print(location)
-#                 geocode_result = gmaps.geocode(location)
-#                 _dict = geocode_result[0]['geometry']['location']
-#                 json.dump((location,(_dict['lat'],_dict['lng'])),fin)
-#                 fin.write("\n")
-#                 return (_dict['lat'],_dict['lng'])
-#             except Exception as e:
-#                 print(location)
-#                 print(e)
-#                 return None
-#     else:
-#         return None
-
-
 def get_location_coords(location):
 
     master_location_coords = defaultdict(list)
-
+    try:
+        with open("./master_location_coords.json") as fout:
+            for line in fout:
+                line = json.loads(line)
+                master_location_coords[line[0]] = line[1]
+    except Exception as e:
+        pass
 
     if location in master_location_coords:
         return master_location_coords[location]
-    elif location is not None and len(location)<3:
-        try:
-            print(location)
-            geocode_result = gmaps.geocode(location)
-            _dict = geocode_result[0]['geometry']['location']
-            return (_dict['lat'],_dict['lng'])
-        except Exception as e:
-            print(location)
-            print(e)
-            return None
+    elif location is not None and len(location)>3:
+        with open("./master_location_coords.json",'a') as fin:
+            try:
+                print(location)
+                geocode_result = gmaps.geocode(location)
+                _dict = geocode_result[0]['geometry']['location']
+                json.dump((location,(_dict['lat'],_dict['lng'])),fin)
+                fin.write("\n")
+                return (_dict['lat'],_dict['lng'])
+            except Exception as e:
+                print(location)
+                print(e)
+                return None
     else:
         return None
+
+# master_location_coords = defaultdict(list)
+
+# def get_location_coords(location):
+
+#     if location in master_location_coords:
+#         return master_location_coords[location]
+#     elif location is not None and len(location)>3:
+#         try:
+#             print(location)
+#             geocode_result = gmaps.geocode(location)
+#             _dict = geocode_result[0]['geometry']['location']
+#             return (_dict['lat'],_dict['lng'])
+#         except Exception as e:
+#             print(location)
+#             print(e)
+#             return None
+#     else:
+#         return None
 
 
 
@@ -637,7 +635,9 @@ def Master_blogs_function(keyword):
     blogs_multiprocess_pool = [p.apply_async(get_post_info, [i]) for i in blogs_news]
     for i,result in enumerate(blogs_multiprocess_pool):
         try:
-            cleaned_results.append(result.get())
+            output = result.get()
+            output['keyword'] = keyword
+            cleaned_results.append(output)
         except Exception as e:
             print("BLOGS EXCEPTION!!",e)
             print('Error on line {}'.format(sys.exc_info()[-1].tb_lineno), type(e).__name__, e)
@@ -693,7 +693,9 @@ def Master_twitter_function(keyword):
 
     for i,result in enumerate(tweets_multiprocess_pool):
         try:
-            cleaned_twitter.append(result.get())
+            output = result.get()
+            output['keyword'] = keyword
+            cleaned_twitter.append(output)
         except Exception as e:
             print("TWITTER EXCEPTION!!",e)
             print('Error on line {}'.format(sys.exc_info()[-1].tb_lineno), type(e).__name__, e)
