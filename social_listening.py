@@ -31,13 +31,13 @@ import languages_countries_dict
 
 from config import *
 from flask import Flask, jsonify,request
-#from flask_cors import CORS
+from flask_cors import CORS
 
 app = Flask(__name__,
             static_url_path='', 
             static_folder='web/static',
             template_folder='web/templates')
-#CORS(app)
+CORS(app)
 
 
 api = twitter.Api(consumer_key=twitter_app_key,
@@ -708,12 +708,12 @@ def Upload_to_kibana(data):
 
     es = Elasticsearch(host)
 
-    try :
-       es.indices.delete(index=index_name, ignore=[400, 404])
-       print('index deleted')
-    except Exception as e:
-       print(e)
-       pass
+    # try :
+    #    es.indices.delete(index=index_name, ignore=[400, 404])
+    #    print('index deleted')
+    # except Exception as e:
+    #    print(e)
+    #    pass
 
     records = data
 
