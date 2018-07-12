@@ -189,7 +189,7 @@ def get_post_info(post):
 
 def get_tweet_info(tweet):
     selected_info = defaultdict(dict)
-    selected_info['id'] = tweet['id']
+    selected_info['id'] = str(tweet['id'])
     selected_info['source_category'] = 'twitter'
     selected_info['domain'] = [tweet['entities']['urls'][0]['display_url'].split('/')[0].lower() if len(tweet['entities']['urls'])>0 else None][0]
     selected_info['domain_full'] = selected_info['domain']
@@ -223,7 +223,7 @@ def get_tweet_info(tweet):
     selected_info['user']['favourites_count'] = tweet['user']['favourites_count']
     selected_info['user']['friends_count'] = tweet['user']['friends_count']
     selected_info['user']['location'] = tweet['user']['location'].lower()
-    selected_info['user']['id'] = tweet['user']['id']
+    selected_info['user']['id'] = str(tweet['user']['id'])
 
     selected_info['entities']['hashtags'] = [i['text'].lower() for i in tweet['entities']['hashtags']]
     selected_info['entities']['people'] = [i['screen_name'].lower() for i in tweet['entities']['user_mentions']]
@@ -247,10 +247,11 @@ def get_latest_crawl_parameter(keyword,media='blogs'):
 
             files=[]
             for file in folders:
-                if media in file:
-                    if os.path.getsize(path+'/'+file)>0:
-                        name = int(file.split('_')[-1].strip('.json'))
-                        files.append(name)
+                if ".json" in file:
+                    if media in file:
+                        if os.path.getsize(path+'/'+file)>0:
+                            name = int(file.split('_')[-1].strip('.json'))
+                            files.append(name)
 
             latest_file = str(sorted(files)[-1])
 
@@ -500,14 +501,14 @@ def Master_twitter_function(keyword):
 
 
 def Upload_to_kibana(data):
-
+    
     es = Elasticsearch(host)
-#   try :
-#       es.indices.delete(index=index_name, ignore=[400, 404])
-#       print('index deleted')
-#   except Exception as e:
-#       print(e)
-#       pass
+#    try:
+#        es.indices.delete(index=index_name_tmp, ignore=[400, 404])
+#        print('index deleted')
+#    except Exception as e:
+#        print(e)
+#        pass
 
     records = data
 
@@ -560,8 +561,7 @@ def run_social_listening_without_monitoring():
         print(e)
         return jsonify(response="Problem in Building Dashboard",url=None)
 
-    return jsonify(response="Dashboard Built",url = "http://185.90.51.142:5601/app/kibana#/dashboard/0ac89420-5287-11e8-8ab0-3f731bc5c361?_g=(refreshInterval:(display:Off,pause:!f,value:0),time:(from:now-6M,mode:quick,to:now))&_a=(description:'',filters:!(('$state':(store:appState),meta:(alias:!n,disabled:!f,index:'663c8a20-8115-11e8-ba2e-69a0a3013ee4',key:keyword.keyword,negate:!f,params:(query:{},type:phrase),type:phrase,value:{}),query:(match:(keyword.keyword:(query:{},type:phrase))))),fullScreenMode:!t,options:(darkTheme:!f,hidePanelTitles:!f,useMargins:!t),panels:!((gridData:(h:20,i:'1',w:48,x:0,y:115),id:'07b340d0-5266-11e8-bada-23eb8c6d65ff',panelIndex:'1',type:visualization,version:'6.3.0'),(gridData:(h:15,i:'2',w:48,x:0,y:15),id:c2c82ac0-5266-11e8-bada-23eb8c6d65ff,panelIndex:'2',type:visualization,version:'6.3.0'),(embeddableConfig:(vis:(params:(sort:(columnIndex:0,direction:desc)))),gridData:(h:20,i:'3',w:48,x:0,y:45),id:'9f905be0-5266-11e8-bada-23eb8c6d65ff',panelIndex:'3',type:visualization,version:'6.3.0'),(gridData:(h:30,i:'5',w:24,x:24,y:65),id:e191b1f0-5285-11e8-8ab0-3f731bc5c361,panelIndex:'5',type:visualization,version:'6.3.0'),(embeddableConfig:(vis:(legendOpen:!f)),gridData:(h:15,i:'6',w:32,x:0,y:30),id:'35836920-5286-11e8-8ab0-3f731bc5c361',panelIndex:'6',type:visualization,version:'6.3.0'),(gridData:(h:20,i:'7',w:24,x:24,y:95),id:b9233360-5285-11e8-8ab0-3f731bc5c361,panelIndex:'7',type:visualization,version:'6.3.0'),(gridData:(h:15,i:'8',w:16,x:32,y:30),id:'74e71770-5285-11e8-8ab0-3f731bc5c361',panelIndex:'8',type:visualization,version:'6.3.0'),(embeddableConfig:(vis:(legendOpen:!f)),gridData:(h:20,i:'9',w:24,x:0,y:65),id:'628886d0-5286-11e8-8ab0-3f731bc5c361',panelIndex:'9',type:visualization,version:'6.3.0'),(embeddableConfig:(vis:(legendOpen:!f)),gridData:(h:30,i:'10',w:24,x:0,y:85),id:'0d23deb0-5286-11e8-8ab0-3f731bc5c361',panelIndex:'10',type:visualization,version:'6.3.0'),(gridData:(h:6,i:'11',w:48,x:0,y:0),id:'783916b0-5287-11e8-8ab0-3f731bc5c361',panelIndex:'11',type:visualization,version:'6.3.0'),(embeddableConfig:(),gridData:(h:9,i:'12',w:48,x:0,y:6),id:'871fdd10-8407-11e8-ba2e-69a0a3013ee4',panelIndex:'12',type:visualization,version:'6.3.0')),query:(language:lucene,query:''),timeRestore:!t,title:social_media_analysis,viewMode:edit)".format(keyword,keyword,keyword))
-
+    return jsonify(response="Dashboard Built", url = "http://185.90.51.142:5601/app/kibana#/dashboard/da377110-85ed-11e8-90af-4bd679e81972?_g=(refreshInterval:(display:Off,pause:!f,value:0),time:(from:now-15m,mode:quick,to:now))&_a=(description:'',filters:!(('$state':(store:appState),meta:(alias:!n,disabled:!f,index:social_listening_tmp_v1,key:keyword.keyword,negate:!f,params:(query:{},type:phrase),type:phrase,value:{}),query:(match:(keyword.keyword:(query:{},type:phrase))))),fullScreenMode:!t,options:(darkTheme:!f,hidePanelTitles:!f,useMargins:!t),panels:!((embeddableConfig:(),gridData:(h:19,i:'2',w:24,x:24,y:51),id:e683db90-85eb-11e8-90af-4bd679e81972,panelIndex:'2',type:visualization,version:'6.3.0'),(embeddableConfig:(),gridData:(h:9,i:'3',w:48,x:0,y:0),id:add29cf0-85eb-11e8-90af-4bd679e81972,panelIndex:'3',type:visualization,version:'6.3.0'),(embeddableConfig:(vis:(legendOpen:!f)),gridData:(h:16,i:'4',w:24,x:0,y:51),id:'91dd0530-85eb-11e8-90af-4bd679e81972',panelIndex:'4',type:visualization,version:'6.3.0'),(embeddableConfig:(vis:(legendOpen:!t)),gridData:(h:15,i:'5',w:17,x:31,y:17),id:'3fd5f510-85ed-11e8-90af-4bd679e81972',panelIndex:'5',type:visualization,version:'6.3.0'),(embeddableConfig:(),gridData:(h:8,i:'6',w:48,x:0,y:9),id:'3fb03a10-85ec-11e8-90af-4bd679e81972',panelIndex:'6',type:visualization,version:'6.3.0'),(embeddableConfig:(),gridData:(h:16,i:'7',w:24,x:0,y:67),id:'006ba1f0-85ec-11e8-90af-4bd679e81972',panelIndex:'7',type:visualization,version:'6.3.0'),(embeddableConfig:(),gridData:(h:15,i:'8',w:48,x:0,y:83),id:'1b9d9b90-85ec-11e8-90af-4bd679e81972',panelIndex:'8',type:visualization,version:'6.3.0'),(embeddableConfig:(vis:(legendOpen:!f)),gridData:(h:15,i:'9',w:31,x:0,y:17),id:cb9d1bc0-85eb-11e8-90af-4bd679e81972,panelIndex:'9',type:visualization,version:'6.3.0'),(embeddableConfig:(mapCenter:!(38.82259097617713,14.062500000000002),mapZoom:2),gridData:(h:19,i:'10',w:48,x:0,y:32),id:cb69c3d0-85f8-11e8-90af-4bd679e81972,panelIndex:'10',type:visualization,version:'6.3.0')),query:(language:lucene,query:''),timeRestore:!t,title:social_media_tmp,viewMode:view)".format(keyword,keyword,keyword))
 
 
 if __name__ == '__main__':
