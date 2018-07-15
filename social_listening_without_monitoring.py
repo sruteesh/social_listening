@@ -367,6 +367,8 @@ def get_twitter(keyword,streaming=True):
                         fin.write('\n')
                         prvs_crawl_since = latest_crawl_since
                         latest_crawl_since = results['statuses'][-1]['id']
+                    else:
+                        break
 
         else:        
             results = api.GetSearch(keyword,count=100,result_type='recent',return_json=True,since_id=latest_crawl_since)
@@ -383,6 +385,8 @@ def get_twitter(keyword,streaming=True):
                             json.dump(results['statuses'],fin)
                             master_results.extend(results['statuses'])
                             fin.write('\n')
+                        else:
+                            break
                     except Exception as e:
                         print(e)
                         if 'out of range' in str(e).lower():
