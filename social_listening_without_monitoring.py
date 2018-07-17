@@ -194,7 +194,6 @@ def get_tweet_info(tweet):
     selected_info['domain'] = [tweet['entities']['urls'][0]['display_url'].split('/')[0].lower() if len(tweet['entities']['urls'])>0 else None][0]
     selected_info['domain_full'] = selected_info['domain']
     selected_info['source_url'] = "https://twitter.com/i/web/status/"+tweet['id_str']
-    selected_info['title'] = None
     selected_info['post_metrics']['num_likes'] = tweet['favorite_count']
     selected_info['post_metrics']['num_shares'] = tweet['retweet_count']
     selected_info['post_metrics']['num_comments'] = None
@@ -212,6 +211,7 @@ def get_tweet_info(tweet):
     selected_info['text']['text'] = [tweet['text'] if tweet['text']!='' else None][0]
     selected_info['text']['cleaned_text'] = get_clean_tweet(selected_info['text']['text'])
     selected_info['text']['text_tokens'] = get_post_tokens(selected_info['text']['cleaned_text'] )
+    selected_info['text']['title'] = [tweet['text'] if tweet['text']!='' else None][0]
 #     selected_info['text']['text_type'] = get_flag(tweet)
 
 
@@ -500,7 +500,7 @@ def Master_twitter_function(keyword):
         except Exception as e:
             print("TWITTER EXCEPTION!!",e)
             print('Error on line {}'.format(sys.exc_info()[-1].tb_lineno), type(e).__name__, e)
-
+            pass
     return cleaned_twitter
 
 
@@ -565,9 +565,7 @@ def run_social_listening_without_monitoring():
         print(e)
         return jsonify(response="Problem in Building Dashboard",url=None)
 
-    return jsonify(response="Dashboard Built", url = "http://185.90.51.142:5601/app/kibana#/dashboard/da377110-85ed-11e8-90af-4bd679e81972?_g=(refreshInterval:(display:Off,pause:!f,value:0),time:(from:now-15m,mode:quick,to:now))&_a=(description:'',filters:!(('$state':(store:appState),meta:(alias:!n,disabled:!f,index:social_listening_tmp_v1,key:keyword.keyword,negate:!f,params:(query:{},type:phrase),type:phrase,value:{}),query:(match:(keyword.keyword:(query:{},type:phrase))))),fullScreenMode:!t,options:(darkTheme:!f,hidePanelTitles:!f,useMargins:!t),panels:!((embeddableConfig:(),gridData:(h:19,i:'2',w:24,x:24,y:51),id:e683db90-85eb-11e8-90af-4bd679e81972,panelIndex:'2',type:visualization,version:'6.3.0'),(embeddableConfig:(),gridData:(h:9,i:'3',w:48,x:0,y:0),id:add29cf0-85eb-11e8-90af-4bd679e81972,panelIndex:'3',type:visualization,version:'6.3.0'),(embeddableConfig:(vis:(legendOpen:!f)),gridData:(h:16,i:'4',w:24,x:0,y:51),id:'91dd0530-85eb-11e8-90af-4bd679e81972',panelIndex:'4',type:visualization,version:'6.3.0'),(embeddableConfig:(vis:(legendOpen:!t)),gridData:(h:15,i:'5',w:17,x:31,y:17),id:'3fd5f510-85ed-11e8-90af-4bd679e81972',panelIndex:'5',type:visualization,version:'6.3.0'),(embeddableConfig:(),gridData:(h:8,i:'6',w:48,x:0,y:9),id:'3fb03a10-85ec-11e8-90af-4bd679e81972',panelIndex:'6',type:visualization,version:'6.3.0'),(embeddableConfig:(),gridData:(h:16,i:'7',w:24,x:0,y:67),id:'006ba1f0-85ec-11e8-90af-4bd679e81972',panelIndex:'7',type:visualization,version:'6.3.0'),(embeddableConfig:(),gridData:(h:15,i:'8',w:48,x:0,y:83),id:'1b9d9b90-85ec-11e8-90af-4bd679e81972',panelIndex:'8',type:visualization,version:'6.3.0'),(embeddableConfig:(vis:(legendOpen:!f)),gridData:(h:15,i:'9',w:31,x:0,y:17),id:cb9d1bc0-85eb-11e8-90af-4bd679e81972,panelIndex:'9',type:visualization,version:'6.3.0'),(embeddableConfig:(mapCenter:!(38.82259097617713,14.062500000000002),mapZoom:2),gridData:(h:19,i:'10',w:48,x:0,y:32),id:cb69c3d0-85f8-11e8-90af-4bd679e81972,panelIndex:'10',type:visualization,version:'6.3.0')),query:(language:lucene,query:''),timeRestore:!t,title:social_media_tmp,viewMode:view)".format(keyword,keyword,keyword))
-
-
+    return jsonify(response="Dashboard Built", url = "http://185.90.51.142:5601/app/kibana#/dashboard/da377110-85ed-11e8-90af-4bd679e81972?_g=(refreshInterval:(display:Off,pause:!f,value:0),time:(from:now-30d,mode:quick,to:now))&_a=(description:'',filters:!(('$state':(store:appState),meta:(alias:!n,disabled:!f,index:social_listening_tmp_v1,key:keyword.keyword,negate:!f,params:(query:{},type:phrase),type:phrase,value:{}),query:(match:(keyword.keyword:(query:{},type:phrase))))),fullScreenMode:!f,options:(darkTheme:!f,hidePanelTitles:!f,useMargins:!t),panels:!((embeddableConfig:(),gridData:(h:19,i:'2',w:24,x:24,y:79),id:e683db90-85eb-11e8-90af-4bd679e81972,panelIndex:'2',type:visualization,version:'6.3.0'),(embeddableConfig:(),gridData:(h:9,i:'3',w:48,x:0,y:7),id:add29cf0-85eb-11e8-90af-4bd679e81972,panelIndex:'3',type:visualization,version:'6.3.0'),(embeddableConfig:(vis:(legendOpen:!f)),gridData:(h:19,i:'4',w:24,x:0,y:79),id:'91dd0530-85eb-11e8-90af-4bd679e81972',panelIndex:'4',type:visualization,version:'6.3.0'),(embeddableConfig:(vis:(legendOpen:!t)),gridData:(h:15,i:'5',w:17,x:31,y:24),id:'3fd5f510-85ed-11e8-90af-4bd679e81972',panelIndex:'5',type:visualization,version:'6.3.0'),(embeddableConfig:(),gridData:(h:8,i:'6',w:48,x:0,y:16),id:'3fb03a10-85ec-11e8-90af-4bd679e81972',panelIndex:'6',type:visualization,version:'6.3.0'),(embeddableConfig:(),gridData:(h:21,i:'7',w:24,x:24,y:98),id:'006ba1f0-85ec-11e8-90af-4bd679e81972',panelIndex:'7',type:visualization,version:'6.3.0'),(embeddableConfig:(),gridData:(h:15,i:'8',w:48,x:0,y:119),id:'1b9d9b90-85ec-11e8-90af-4bd679e81972',panelIndex:'8',type:visualization,version:'6.3.0'),(embeddableConfig:(vis:(legendOpen:!f)),gridData:(h:15,i:'9',w:31,x:0,y:24),id:cb9d1bc0-85eb-11e8-90af-4bd679e81972,panelIndex:'9',type:visualization,version:'6.3.0'),(embeddableConfig:(mapCenter:!(38.82259097617713,14.062500000000002),mapZoom:2),gridData:(h:22,i:'10',w:48,x:0,y:57),id:cb69c3d0-85f8-11e8-90af-4bd679e81972,panelIndex:'10',type:visualization,version:'6.3.0'),(embeddableConfig:(vis:(legendOpen:!f)),gridData:(h:21,i:'11',w:24,x:0,y:98),id:cc121710-845e-11e8-ba2e-69a0a3013ee4,panelIndex:'11',type:visualization,version:'6.3.0'),(embeddableConfig:(),gridData:(h:18,i:'12',w:48,x:0,y:39),id:b4c6e490-89f0-11e8-90af-4bd679e81972,panelIndex:'12',type:visualization,version:'6.3.0'),(embeddableConfig:(),gridData:(h:7,i:'13',w:48,x:0,y:0),id:'783916b0-5287-11e8-8ab0-3f731bc5c361',panelIndex:'13',type:visualization,version:'6.3.0')),query:(language:lucene,query:''),timeRestore:!t,title:social_media_tmp,viewMode:view)".format(keyword,keyword,keyword))
 if __name__ == '__main__':
     app.run(debug=True,port=9000,host="0.0.0.0")
 
