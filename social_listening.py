@@ -751,8 +751,7 @@ def run_social_listening():
         keyword = _input['keyword']
     except Exception as e:
         print(e)
-        print('Keyword not given, EXITING !!')
-        sys.exit()
+        return handle_exceptions(message='Keyword not given, EXITING !!',response_code=421)
 
 
     global date_today
@@ -793,7 +792,7 @@ def run_social_listening():
         Upload_to_kibana(final_result)
     except Exception as e:
         print(e)
-        return jsonify(response="Problem in Building Dashboard",url=None)
+        return handle_exceptions(message="Problem in Building Dashboard",response_code=430)
 
     return jsonify(response="Dashboard Built", url = "http://185.90.51.142:5601/app/kibana#/dashboard/0ac89420-5287-11e8-8ab0-3f731bc5c361?_g=(refreshInterval:(display:Off,pause:!f,value:0),time:(from:now-30d,mode:quick,to:now))&_a=(description:'',filters:!(('$state':(store:appState),meta:(alias:!n,disabled:!f,index:'663c8a20-8115-11e8-ba2e-69a0a3013ee4',key:keyword.keyword,negate:!f,params:(query:{},type:phrase),type:phrase,value:{}),query:(match:(keyword.keyword:(query:{},type:phrase))))),fullScreenMode:!f,options:(darkTheme:!f,hidePanelTitles:!f,useMargins:!t),panels:!((gridData:(h:20,i:'1',w:48,x:0,y:24),id:'07b340d0-5266-11e8-bada-23eb8c6d65ff',panelIndex:'1',type:visualization,version:'6.3.0'),(gridData:(h:8,i:'2',w:48,x:0,y:16),id:c2c82ac0-5266-11e8-bada-23eb8c6d65ff,panelIndex:'2',type:visualization,version:'6.3.0'),(gridData:(h:23,i:'5',w:29,x:0,y:74),id:e191b1f0-5285-11e8-8ab0-3f731bc5c361,panelIndex:'5',type:visualization,version:'6.3.0'),(embeddableConfig:(vis:(legendOpen:!f)),gridData:(h:15,i:'6',w:32,x:0,y:59),id:'35836920-5286-11e8-8ab0-3f731bc5c361',panelIndex:'6',type:visualization,version:'6.3.0'),(gridData:(h:19,i:'7',w:29,x:0,y:97),id:b9233360-5285-11e8-8ab0-3f731bc5c361,panelIndex:'7',type:visualization,version:'6.3.0'),(gridData:(h:15,i:'8',w:16,x:32,y:59),id:'74e71770-5285-11e8-8ab0-3f731bc5c361',panelIndex:'8',type:visualization,version:'6.3.0'),(embeddableConfig:(vis:(legendOpen:!f)),gridData:(h:23,i:'9',w:19,x:29,y:74),id:'628886d0-5286-11e8-8ab0-3f731bc5c361',panelIndex:'9',type:visualization,version:'6.3.0'),(embeddableConfig:(vis:(legendOpen:!f)),gridData:(h:19,i:'10',w:19,x:29,y:97),id:'0d23deb0-5286-11e8-8ab0-3f731bc5c361',panelIndex:'10',type:visualization,version:'6.3.0'),(gridData:(h:7,i:'11',w:48,x:0,y:0),id:'783916b0-5287-11e8-8ab0-3f731bc5c361',panelIndex:'11',type:visualization,version:'6.3.0'),(embeddableConfig:(vis:(params:(sort:(columnIndex:0,direction:desc)))),gridData:(h:15,i:'12',w:48,x:0,y:44),id:'17ba7cb0-85e6-11e8-ba2e-69a0a3013ee4',panelIndex:'12',type:visualization,version:'6.3.0'),(embeddableConfig:(),gridData:(h:9,i:'13',w:48,x:0,y:7),id:'871fdd10-8407-11e8-ba2e-69a0a3013ee4',panelIndex:'13',type:visualization,version:'6.3.0')),query:(language:lucene,query:''),timeRestore:!t,title:social_media_analysis,viewMode:view)".format(keyword,keyword,keyword))
 
@@ -810,9 +809,7 @@ def subscribe_alerts():
             print(_input)
             keyword = _input['keyword']
         except Exception as e:
-            print(e)
-            print('Keyword not given, EXITING !!')
-            sys.exit()
+            return handle_exceptions(message='Keyword not given, EXITING !!',response_code=421)
             
         global date_today
         global date_timestamp
@@ -831,26 +828,21 @@ def subscribe_alerts():
             if 'media_type' in _input:
                 media_type = str(_input['media_type']).lower()
             else:
-                print("Please mention Media Type (Blogs/News/Discussions/Twitter)")
-                return jsonify(response="Please mention Media Type (Blogs/News/Discussions/Twitter)")
-                sys.exit()
+                return handle_exceptions(message='Please mention Media Type (Blogs/News/Discussions/Twitter)',response_code=422)
 
             if 'alert_keyword' in _input:
                 alert_keywords = str(_input['alert_keyword']).lower().split(',')
             else:
-                print("Please mention Keyword for Alerts")
-                return jsonify(response="Please mention Keyword for Alerts")
-                sys.exit()
+                return handle_exceptions(message='Please mention Keyword for Alerts',response_code=422)
 
             if 'recipient' in _input:
                 recipient = str(_input['recipient']).lower()
             else:
-                print("Please mention recipient to send Email Alerts")
-                return jsonify(response="Please mention recipient to send Email Alerts")
-                sys.exit()
+                return handle_exceptions(message='Please mention recipient to send Email Alerts',response_code=423)
 
     except Exception as e:
-        print(e)
+        return handle_exceptions(message=e,response_code=424)
+
 
     try:
         final_df = pd.read_csv(path+'/'+keyword+"_all_social_media_"+str(date_today)+".csv")
@@ -864,7 +856,7 @@ def subscribe_alerts():
 
     except Exception as e:
         print(e)
-        return jsonify(response="Keyword Not monitored. Add keyword to monitor first")
+        return handle_exceptions(message="Keyword Not monitored. Add keyword to monitor first",response_code=425)
 
 
     alert_dict = get_subscribed_keyword_posts(alert_type,alert_keywords,final_df)
@@ -877,24 +869,23 @@ def subscribe_alerts():
 
         except Exception as e:
             print(e)
-            return jsonify(response="Couldn't Send Alerts for {}, No Matching Article Found".format(alert_keyword))
+            return handle_exceptions(message="Couldn't Send Alerts for {}, No Matching Article Found".format(alert_keyword),response_code=426)
 
     return jsonify(response="Successfully subscribed to alerts")
 
 
+@app.errorhandler(Exception)
+def default_exception_handle(error):
+    response = jsonify(message=str(error))
+    response.status_code = 420
+    return response
 
+def handle_exceptions(message,response_code):
+    response = jsonify(response=message)
+    response.status_code = response_code
+    return response
 
 if __name__ == '__main__':
-
-    # master_location_coords = defaultdict(list)
-    # try:
-    #     with open("./master_location_coords.json") as fout:
-    #         for line in fout:
-    #             line = json.loads(line)
-    #             master_location_coords[line[0]] = line[1]
-    # except Exception as e:
-    #     print(e)
-
 
     app.run(debug=True,port=9001,host="0.0.0.0")
 
