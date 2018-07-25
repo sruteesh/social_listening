@@ -1,4 +1,7 @@
 from social_listening_functions import *
+from multiprocessing import Pool
+from functools import partial
+import gc,ast,operator
 
 import logging
 
@@ -16,19 +19,11 @@ app = Flask(__name__,
             template_folder='web/templates')
 CORS(app)
 
-num_processes = 6
-def pool_init():  
-    gc.collect()
-
-p = Pool(initializer=pool_init, processes = num_processes)
-
-
-
 
 def get_latest_crawl_parameter(keyword,media='blogs'):
     try:
         if not os.path.exists(path):
-            logger.warning('No keyword folder found!!')
+            print('No keyword folder found!!')
             return None
         else:
             folders = os.listdir(path)
@@ -64,7 +59,7 @@ def get_latest_crawl_parameter(keyword,media='blogs'):
             return latest_crawl_since
         
     except Exception as e:
-        logger.warning("Couldn't get latest crawl parameter!! {}".format(e))
+        print("Couldn't get latest crawl parameter!! {}".format(e))
         return None
 
 
@@ -105,7 +100,7 @@ def get_blogs_news(keyword,streaming=True):
                     output = webhoseio.query("filterWebContent", query_params)
                     prvs_crawl_since = latest_crawl_since
                     if len(output['posts'])>0:
-                        logger.debug("Getting {} {}".format(count,len(output['posts'])))
+                        print("Getting {} {}".format(count,len(output['posts'])))
                         count+=1
                         for post in output['posts']:
                             try:
@@ -113,12 +108,12 @@ def get_blogs_news(keyword,streaming=True):
                                 fin.write('\n')
                                 results.append(post)
                             except Exception as e:
-                                logger.warning("DUMPING TO FILE FAILED!! {} ".format(e))
+                                print("DUMPING TO FILE FAILED!! {} ".format(e))
                         latest_crawl_since = datetime.datetime.timestamp(datetime.datetime.strptime(results[-1]['crawled'].split('.')[0],'%Y-%m-%dT%H:%M:%S'))
                     else:
                         break
             except Exception as e:
-                logger.warning("GETTING BLOGS FAILED!! {} ".format(e))
+                print("GETTING BLOGS FAILED!! {} ".format(e))
                 break
     return results
 
@@ -142,7 +137,7 @@ def get_twitter(keyword,streaming=True):
 
         if not latest_crawl_since:
             for i in range(10):
-                logger.debug('getting {}'.format((i+1)*100))
+                print('getting {}'.format((i+1)*100))
                 if prvs_crawl_since==latest_crawl_since:
                     return master_results
                 else:
@@ -165,7 +160,7 @@ def get_twitter(keyword,streaming=True):
 
                 for i in range(10):
                     try:
-                        logger.debug('2 getting {}'.format((i+1)*100))
+                        print('2 getting {}'.format((i+1)*100))
                         results = api.GetSearch(keyword,count=100,result_type='recent',return_json=True,since_id=results['statuses'][0]['id'])
                         if len(results['statuses'])>0:
                             json.dump(results['statuses'],fin)
@@ -177,15 +172,47 @@ def get_twitter(keyword,streaming=True):
                         if 'out of range' in str(e).lower():
                             return master_results
                         else:
-                            logger.warning("GETTING TWEETS FAILED!! RETRYING {} ".format(e))
+                            print("GETTING TWEETS FAILED!! RETRYING {} ".format(e))
                             pass
     return master_results
 
 
+def get_articles(keyword,source,page_limit=1):
+    service = getService()
+    startIndex = 1
+    response = []
+    q = '"'+keyword+'"'
+    
+    if source=='google':
+        site = ''
+    else:
+        site = source+".com"
+    
+    with open(path+'/'+keyword+"_"+source+'_'+str(date_today)+".json",'w') as fin:
+
+        for nPage in range(0, page_limit):
+            try:
+                print ("Reading page number {} for {}:".format(nPage+1,source))
+
+                result = service.cse().list(
+                    q=q, #Search words
+                    cx='001132580745589424302:jbscnf14_dw',  #CSE Key
+                    lr='lang_en', #Search language
+                    siteSearch=site,
+                    start=startIndex,
+                    sort = 'date'
+                ).execute()
+                
+                startIndex = result.get("queries").get("nextPage")[0].get("startIndex")
+                json.dump(result['items'],fin)
+                fin.write('\n')
+                
+            except Exception as e:
+                print(e)
+                return
+    return
 
 def Master_blogs_function(keyword):
-
-    tmp_blogs = get_blogs_news(keyword)
 
     try:
         blogs_done_files=[]
@@ -219,15 +246,15 @@ def Master_blogs_function(keyword):
     t1 = time.time()
     cleaned_results = []
     blogs_multiprocess_pool = [p.apply_async(get_post_info, [i]) for i in blogs_news]
-    logger.info("PROCESSING BLOGS....")
+    print("PROCESSING BLOGS....")
     for i,result in enumerate(blogs_multiprocess_pool):
         try:
             output = result.get()
             output['keyword'] = keyword
             cleaned_results.append(output)
         except Exception as e:
-            logger.warning("BLOGS EXCEPTION!! {}".format(e))
-            logger.warning('Error on line {}'.format(sys.exc_info()[-1].tb_lineno), type(e).__name__, e)
+            print("BLOGS EXCEPTION!! {}".format(e))
+            print('Error on line {}'.format(sys.exc_info()[-1].tb_lineno), type(e).__name__, e)
             pass
 
     return cleaned_results
@@ -235,8 +262,6 @@ def Master_blogs_function(keyword):
 
 def Master_twitter_function(keyword):
 #### Twitter
-    
-    results = get_twitter(keyword)
 
     try:
         twitter_done_files=[]
@@ -275,7 +300,7 @@ def Master_twitter_function(keyword):
     tweets = [tweet for tweet in sum(twitter,[])]
 
 
-    logger.info("PROCESSING TWEETS....")
+    print("PROCESSING TWEETS....")
     tweets_multiprocess_pool = [p.apply_async(get_tweet_info, [i]) for i in tweets]
 
     for i,result in enumerate(tweets_multiprocess_pool):
@@ -284,14 +309,42 @@ def Master_twitter_function(keyword):
             output['keyword'] = keyword
             cleaned_twitter.append(output)
         except Exception as e:
-            logger.warning("TWITTER EXCEPTION!! {} ".format(e))
-            logger.warning('Error on line {}'.format(sys.exc_info()[-1].tb_lineno), type(e).__name__, e)
+            print("TWITTER EXCEPTION!! {} ".format(e))
+            print('Error on line {}'.format(sys.exc_info()[-1].tb_lineno), type(e).__name__, e)
             pass
 
     return cleaned_twitter
 
 
+def Master_google_function(keyword,source):
 
+
+    goog_yout_pint=[]
+    with open(path+'/'+keyword+"_"+source+'_'+str(date_today)+".json") as fin:
+        for line in fin:
+            goog_yout_pint.extend(json.loads(line))
+
+
+
+    # Process Google, Youtube, Pinterest
+    t1 = time.time()
+    cleaned_results = []
+    goog_yout_pint_multiprocess_pool = [p.apply_async(get_articles_info, [(i,source)]) for i in goog_yout_pint]
+    
+    
+    print("PROCESSING {}....".format(source))
+    
+    for i,result in enumerate(goog_yout_pint_multiprocess_pool):
+        try:
+            output = result.get()
+            output['keyword'] = keyword
+            cleaned_results.append(output)
+        except Exception as e:
+            print("{} EXCEPTION!! {}".format(source, e))
+            print('MAIN ERROR on line {}'.format(sys.exc_info()[-1].tb_lineno), type(e).__name__, e)
+            pass
+
+    return cleaned_results
 
 def Upload_to_kibana(data):
 
@@ -315,11 +368,46 @@ def Upload_to_kibana(data):
     return helpers.bulk(es, actions=actions)
 
 
-# num_processes = 6
-# def pool_init():  
-#     gc.collect()
 
-# p = Pool(initializer=pool_init, processes = num_processes)
+
+def get_social_search_results(keyword_tuple):
+    
+    global path
+    global date_today
+    global date_timestamp
+
+    keyword,source = keyword_tuple[0]
+    path = keyword_tuple[1]
+    date_today = keyword_tuple[2]
+    date_timestamp = keyword_tuple[3]
+
+    if source=='blogs':
+        tmp_articles = get_blogs_news(keyword)
+    elif source=='twitter':
+        tmp_articles = get_twitter(keyword)
+    else:
+        tmp_articles = get_articles(keyword,source)
+        
+    return
+
+def search_social_media(search_inputs):
+
+    social_media_multiprocess_pool = [p.apply_async(get_social_search_results, [(i,path,date_today,date_timestamp)]) for i in search_inputs]
+    for i,result in enumerate(social_media_multiprocess_pool):
+        try:
+            output = result.get()
+        except Exception as e:
+            print("SEARCH EXCEPTION!! {}".format(e))
+            pass
+    return None
+
+num_processes = 6
+def pool_init():  
+    gc.collect()
+
+p = Pool(initializer=pool_init, processes = num_processes)
+
+
 
 
 @app.route('/run_social_listening', methods=['POST'])
@@ -335,7 +423,6 @@ def run_social_listening():
         logger.warning("NO KEYWORD GIVEN !! {}".format(e))
         return handle_exceptions(message='Keyword not given, EXITING !!',response_code=421)
 
-
     global date_today
     global date_timestamp
     global path
@@ -347,10 +434,20 @@ def run_social_listening():
 
     path = "data/" +keyword+'/'+str(date_today)
 
-    cleaned_results = Master_blogs_function(keyword)
-    cleaned_twitter = Master_twitter_function(keyword)
+    search_inputs = [(keyword,'blogs'),(keyword,'twitter'),(keyword,'youtube'),(keyword,'pinterest'),(keyword,'reddit'),(keyword,'google')]
 
-    final_result = cleaned_results+cleaned_twitter
+    search_social_media(search_inputs)
+    # for i in search_inputs:
+    #     get_social_search_results(i)
+
+    cleaned_blogs = Master_blogs_function(keyword)
+    cleaned_twitter = Master_twitter_function(keyword)
+    cleaned_pinterest = Master_google_function(keyword,'pinterest')
+    cleaned_youtube = Master_google_function(keyword,'youtube')
+    cleaned_reddit = Master_google_function(keyword,'reddit')
+    cleaned_google = Master_google_function(keyword,'google')
+
+    final_result = cleaned_blogs+cleaned_twitter+cleaned_pinterest+cleaned_youtube+cleaned_reddit+cleaned_google
     final_df = pd.DataFrame(final_result)
 
     final_df.to_csv(path+'/'+keyword+"_all_social_media_"+str(date_today)+".csv",index=False,mode='a')

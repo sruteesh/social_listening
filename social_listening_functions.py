@@ -5,17 +5,10 @@ import time
 import numpy as np
 import math,json
 import csv,pandas as pd
-from multiprocessing import Pool
-from functools import partial
-import gc
-import ast
-import operator
+
 
 from elasticsearch import helpers, Elasticsearch
-import csv,pandas as pd
-import datetime,re
-
-import time,sys,os
+import time,sys,os,re
 from requests import get
 from gmail import GMail, Message
 
@@ -57,7 +50,17 @@ alerts_password = get_key(password_encr)
 
 
 
- 
+import json
+
+from googleapiclient.discovery import build
+
+def getService():
+    service = build("customsearch", "v1",
+            developerKey="AIzaSyCzXI8xt7_zy7FTQXaZgP37dhe49cmkAcs")
+
+    return service
+
+
 # from multiprocessing import Process,Manager
 
 # m = Manager()
@@ -195,96 +198,231 @@ def get_post_tokens(post):
 
 #blogs/news/discussions
 def get_post_info(post):
-    result= defaultdict(dict)
-    output_thread = post['thread']
-    result['id'] = output_thread['uuid']
-    result['source_category'] = output_thread['site_type']
-    result['domain'] = str(output_thread['site']).lower()
-    result['domain_full'] = str(output_thread['site_full']).lower()
-    result['source_url'] = output_thread['url']
-    result['post_metrics']['num_shares'] = sum([(output_thread['social'][j]['shares']) for j in output_thread['social']])
-    result['post_metrics']['num_comments'] = output_thread['replies_count']
-    result['post_metrics']['num_likes'] = output_thread['participants_count']
-    result['location']['country'] = countries_dict.get(output_thread['country'], output_thread['country']).lower()
-    result['geo_coordinates'] = get_location_coords(result['location']['country'])
-    result['language'] = post['language'].lower()
-    
-    result['text']['text'] = [post['text'] if post['text']!='' else None][0]
-    result['text']['title'] = output_thread['title']
-    result['text']['cleaned_text'] = get_clean_post(str(result['text']['text']))
-    result['text']['text_tokens'] = get_post_tokens(result['text']['cleaned_text'])
-    result['text']['text_type'] = None
-    
-    result['entities']['people'] = [i['name'].lower() for i in post['entities']['persons']]
-    result['entities']['organizations'] = [i['name'].lower() for i in post['entities']['organizations']]
-    result['entities']['hashtags'] = re.findall("#(\w+)",str(result['text']['text']).lower())
-    
-    result['user']['name'] = [post['author'].lower() if post['author']!='' else None][0]
-    result['user']['vintage'] = None
-    result['user']['screen_name'] = None
-    result['user']['statuses_count'] = None
-    result['user']['followers_count'] = None
-    result['user']['favourites_count'] = None
-    result['user']['friends_count'] = None
-    result['user']['location'] = None
-        
-    result['published_date'] = datetime.datetime.strptime( post['published'].split('.')[0], "%Y-%m-%dT%H:%M:%S")
-    result['crawled_date'] = datetime.datetime.strptime( post['crawled'].split('.')[0], "%Y-%m-%dT%H:%M:%S")
+    try:
+        result= defaultdict(dict)
+        output_thread = post['thread']
+        result['id'] = output_thread['uuid']
+        result['source_category'] = output_thread['site_type']
+        result['domain'] = str(output_thread['site']).lower()
+        result['domain_full'] = str(output_thread['site_full']).lower()
+            
+        if 'reddit' in result['domain']:
+            result['source_category'] = 'reddit'
+        elif 'youtube' in result['domain']:
+            result['source_category'] = 'youtube'
+        elif 'pinterest' in result['domain']:
+            result['source_category'] = 'pinterest'
 
-    return result
+        result['source_url'] = output_thread['url']
+        result['post_metrics']['num_shares'] = sum([(output_thread['social'][j]['shares']) for j in output_thread['social']])
+        result['post_metrics']['num_comments'] = output_thread['replies_count']
+        result['post_metrics']['num_likes'] = output_thread['participants_count']
+        result['location']['country'] = countries_dict.get(output_thread['country'], output_thread['country']).lower()
+        result['geo_coordinates'] = get_location_coords(result['location']['country'])
+        result['language'] = post['language'].lower()
+        
+        result['text']['text'] = [post['text'] if post['text']!='' else None][0]
+        result['text']['title'] = output_thread['title']
+        result['text']['cleaned_text'] = get_clean_post(str(result['text']['text']))
+        result['text']['text_tokens'] = get_post_tokens(result['text']['cleaned_text'])
+        result['text']['text_type'] = None
+        
+        result['entities']['people'] = [i['name'].lower() for i in post['entities']['persons']]
+        result['entities']['organizations'] = [i['name'].lower() for i in post['entities']['organizations']]
+        result['entities']['hashtags'] = re.findall("#(\w+)",str(result['text']['text']).lower())
+        
+        result['user']['name'] = [post['author'].lower() if post['author']!='' else None][0]
+        result['user']['vintage'] = None
+        result['user']['screen_name'] = None
+        result['user']['statuses_count'] = None
+        result['user']['followers_count'] = None
+        result['user']['favourites_count'] = None
+        result['user']['friends_count'] = None
+        result['user']['location'] = None
+            
+        result['published_date'] = datetime.datetime.strptime( post['published'].split('.')[0], "%Y-%m-%dT%H:%M:%S")
+        result['crawled_date'] = datetime.datetime.strptime( post['crawled'].split('.')[0], "%Y-%m-%dT%H:%M:%S")
+
+        return result
+    except Exception as e:
+        print('Error on line {}'.format(sys.exc_info()[-1].tb_lineno), type(e).__name__, e)
+        return 
 
 
 
 
 
 def get_tweet_info(tweet):
+    try:
+        selected_info = defaultdict(dict)
+        selected_info['id'] = str(tweet['id'])
+        selected_info['source_category'] = 'twitter'
+        selected_info['domain'] = [tweet['entities']['urls'][0]['display_url'].split('/')[0].lower() if len(tweet['entities']['urls'])>0 else None][0]
+        selected_info['domain_full'] = selected_info['domain']
+        
+        if selected_info['domain'] is not None:
+            if 'reddit' in selected_info['domain']:
+                selected_info['source_category'] = 'reddit'
+            elif 'youtube' in selected_info['domain']:
+                selected_info['source_category'] = 'youtube'
+            elif 'pinterest' in selected_info['domain']:
+                selected_info['source_category'] = 'pinterest'
+        
+        selected_info['source_url'] = "https://twitter.com/i/web/status/"+tweet['id_str']
+        selected_info['post_metrics']['num_likes'] = tweet['favorite_count']
+        selected_info['post_metrics']['num_shares'] = tweet['retweet_count']
+        selected_info['post_metrics']['num_comments'] = None
+        selected_info['language'] = language_dict.get(tweet['lang'],tweet['lang']).lower()
+        
+        if tweet['place'] is not None:
+            selected_info['location']['city'] = tweet['place']['name'].lower()
+            selected_info['location']['country'] = tweet['place']['country'].lower()
+        elif tweet['user']['time_zone'] is not None:
+            selected_info['location']['country'] = tweet['user']['time_zone'].lower().replace('time','')
+        else:
+            selected_info['location']['country']=None
+        selected_info['geo_coordinates'] = get_location_coords(selected_info['location']['country'])
 
-    selected_info = defaultdict(dict)
-    selected_info['id'] = str(tweet['id'])
-    selected_info['source_category'] = 'twitter'
-    selected_info['domain'] = [tweet['entities']['urls'][0]['display_url'].split('/')[0].lower() if len(tweet['entities']['urls'])>0 else None][0]
-    selected_info['domain_full'] = selected_info['domain']
-    selected_info['source_url'] = "https://twitter.com/i/web/status/"+tweet['id_str']
-    selected_info['post_metrics']['num_likes'] = tweet['favorite_count']
-    selected_info['post_metrics']['num_shares'] = tweet['retweet_count']
-    selected_info['post_metrics']['num_comments'] = None
-    selected_info['language'] = language_dict.get(tweet['lang'],tweet['lang']).lower()
+        selected_info['text']['text'] = [tweet['text'] if tweet['text']!='' else None][0]
+        selected_info['text']['cleaned_text'] = get_clean_tweet(selected_info['text']['text'])
+        selected_info['text']['text_tokens'] = get_post_tokens(selected_info['text']['cleaned_text'] )
+        selected_info['text']['title'] = [tweet['text'] if tweet['text']!='' else None][0]
+    #     selected_info['text']['text_type'] = get_flag(tweet)
+
+
+        selected_info['user']['name'] = tweet['user']['name'].lower()
+        selected_info['user']['vintage'] = tweet['user']['created_at']
+        selected_info['user']['screen_name'] = tweet['user']['screen_name'].lower()
+        selected_info['user']['statuses_count'] = tweet['user']['statuses_count']
+        selected_info['user']['followers_count'] = tweet['user']['followers_count']
+        selected_info['user']['favourites_count'] = tweet['user']['favourites_count']
+        selected_info['user']['friends_count'] = tweet['user']['friends_count']
+        selected_info['user']['location'] = tweet['user']['location'].lower()
+        selected_info['user']['id'] = tweet['user']['id']
+
+        selected_info['entities']['hashtags'] = [i['text'].lower() for i in tweet['entities']['hashtags']]
+        selected_info['entities']['people'] = [i['screen_name'].lower() for i in tweet['entities']['user_mentions']]
+        selected_info['entities']['people_ids'] = [i['id'] for i in tweet['entities']['user_mentions']]
+
+        selected_info['published_date'] = [i for i in datefinder.find_dates(tweet['created_at'])][0]
+        selected_info['crawled_date'] = datetime.datetime.today()
+        return selected_info
+    except Exception as e:
+        print('Error on line {}'.format(sys.exc_info()[-1].tb_lineno), type(e).__name__, e)
+        return 
+
+
+def get_articles_info(post_tuple):
+    try:
+        post,source = post_tuple
+        selected_info = defaultdict(dict)
+        selected_info['id'] = None
+        selected_info['post_metrics']['num_likes'] = None
+        selected_info['post_metrics']['num_shares'] = None
+        selected_info['post_metrics']['num_comments'] = None
+        selected_info['language'] = 'en'
+        selected_info['location']['city'] = None
+        selected_info['location']['country'] = None
+        selected_info['user']['vintage'] = None
+        selected_info['user']['statuses_count'] = None
+        selected_info['user']['favourites_count'] = None
+        selected_info['user']['friends_count'] = None
+        selected_info['user']['location'] = None
+        selected_info['user']['id'] = None
+        selected_info['entities']['people'] = None
+        selected_info['entities']['people_ids'] = None
+
+        selected_info['published_date'] = None
+        selected_info['crawled_date'] = datetime.datetime.today()
+
+        selected_info['source_url'] = post['link']
+        selected_info['text']['text'] = post['snippet']
+        selected_info['text']['cleaned_text'] = get_clean_tweet(selected_info['text']['text'])
+        selected_info['text']['text_tokens'] = get_post_tokens(selected_info['text']['cleaned_text'] )
+        selected_info['text']['title'] = post['title']
+
+        if 'pinterest' in source:
+            selected_info['source_category'] = 'pinterest'
+            selected_info['domain'] = "pinterest.com"
+            selected_info['domain_full'] = "www.pinterest.com"
+
+            try:
+                if 'pinner' in post['pagemap']['metatags'][0]:
+                    author = post['pagemap']['metatags'][0]['pinterestapp:pinner']
+                    followers = post['pagemap']['metatags'][0]['followers']
+                elif 'pinterestapp:followers' in post['pagemap']['metatags'][0]:
+                    author = post['link'].split('/')[-2]
+                    followers = post['pagemap']['metatags'][0]['pinterestapp:followers']
+                else:
+                    author= None
+                    followers=None
+            except Exception as e:
+                author= None
+                followers=None
+                print(e)
+                pass
+
+            selected_info['user']['name'] = author
+            selected_info['user']['screen_name'] = author
+            selected_info['user']['followers_count'] = followers
+            selected_info['entities']['hashtags'] = [i for i in post['title'].split() if '#' in i]
+
+
+        elif 'youtube' in source:
+            
+            try:
+                author = post['pagemap']['person'][0]['url']
+                if 'channel' in author:
+                    author = post['pagemap']['metatags'][0]['twitter:title']
+            except Exception as e:
+                print('author error',e)
+                author = None
+
+            selected_info['user']['name'] = author
+            selected_info['user']['screen_name'] = author
+            selected_info['user']['followers_count'] = None
+            selected_info['entities']['hashtags'] = [i for i in post['title'].split() if '#' in i]
+
+            try:
+                date = post['pagemap']['videoobject'][0]['datepublished']
+                selected_info['published_date'] = [i for i in datefinder.find_dates(date)][0]
+            except Exception as e:
+                print(e)
+                pass
+
+            selected_info['source_category'] = 'youtube'
+            selected_info['domain'] = "youtube.com"
+            selected_info['domain_full'] = "www.youtube.com"
+
+        elif 'reddit' in source:
+
+            selected_info['user']['name'] = None
+            selected_info['user']['screen_name'] = None
+            selected_info['user']['followers_count'] = None
+            selected_info['entities']['hashtags'] = [i for i in post['title'].split() if '#' in i]
+
+
+            selected_info['source_category'] = 'reddit'
+            selected_info['domain'] = post['displayLink']
+            selected_info['domain_full'] = post['displayLink']
+
+        else:
+
+            selected_info['user']['name'] = None
+            selected_info['user']['screen_name'] = None
+            selected_info['user']['followers_count'] = None
+            selected_info['entities']['hashtags'] = [i for i in post['title'].split() if '#' in i]
+
+
+            selected_info['source_category'] = 'google'
+            selected_info['domain'] = post['displayLink']
+            selected_info['domain_full'] = post['displayLink']
     
-    if tweet['place'] is not None:
-        selected_info['location']['city'] = tweet['place']['name'].lower()
-        selected_info['location']['country'] = tweet['place']['country'].lower()
-    elif tweet['user']['time_zone'] is not None:
-        selected_info['location']['country'] = tweet['user']['time_zone'].lower().replace('time','')
-    else:
-        selected_info['location']['country']=None
-    selected_info['geo_coordinates'] = get_location_coords(selected_info['location']['country'])
+        return selected_info
 
-    selected_info['text']['text'] = [tweet['text'] if tweet['text']!='' else None][0]
-    selected_info['text']['cleaned_text'] = get_clean_tweet(selected_info['text']['text'])
-    selected_info['text']['text_tokens'] = get_post_tokens(selected_info['text']['cleaned_text'] )
-    selected_info['text']['title'] = [tweet['text'] if tweet['text']!='' else None][0]
-#     selected_info['text']['text_type'] = get_flag(tweet)
-
-
-    selected_info['user']['name'] = tweet['user']['name'].lower()
-    selected_info['user']['vintage'] = tweet['user']['created_at']
-    selected_info['user']['screen_name'] = tweet['user']['screen_name'].lower()
-    selected_info['user']['statuses_count'] = tweet['user']['statuses_count']
-    selected_info['user']['followers_count'] = tweet['user']['followers_count']
-    selected_info['user']['favourites_count'] = tweet['user']['favourites_count']
-    selected_info['user']['friends_count'] = tweet['user']['friends_count']
-    selected_info['user']['location'] = tweet['user']['location'].lower()
-    selected_info['user']['id'] = tweet['user']['id']
-
-    selected_info['entities']['hashtags'] = [i['text'].lower() for i in tweet['entities']['hashtags']]
-    selected_info['entities']['people'] = [i['screen_name'].lower() for i in tweet['entities']['user_mentions']]
-    selected_info['entities']['people_ids'] = [i['id'] for i in tweet['entities']['user_mentions']]
-
-    selected_info['published_date'] = [i for i in datefinder.find_dates(tweet['created_at'])][0]
-    selected_info['crawled_date'] = datetime.datetime.today()
-    return selected_info
-
-
+    except Exception as e:
+        print('Error on line {}'.format(sys.exc_info()[-1].tb_lineno), type(e).__name__, e)
+        return None
 
 
 
