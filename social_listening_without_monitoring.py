@@ -1,6 +1,10 @@
 
 # coding: utf-8
 from social_listening_functions import *
+from multiprocessing import Pool
+from functools import partial
+import gc,ast,operator
+
 
 import logging
 
@@ -39,19 +43,10 @@ def Upload_to_kibana(data):
     return helpers.bulk(es, actions=actions)
 
 
-num_processes = 6
-def pool_init():  
-    gc.collect()
-
-p = Pool(initializer=pool_init, processes = num_processes)
-
-
-
-
 def get_latest_crawl_parameter(keyword,media='blogs'):
     try:
         if not os.path.exists(path):
-            logger.warning('No keyword folder found!!')
+            print('No keyword folder found!!')
             return None
         else:
             folders = os.listdir(path)
@@ -87,7 +82,7 @@ def get_latest_crawl_parameter(keyword,media='blogs'):
             return latest_crawl_since
         
     except Exception as e:
-        logger.warning("Couldn't get latest crawl parameter!! {}".format(e))
+        print("Couldn't get latest crawl parameter!! {}".format(e))
         return None
 
 
@@ -96,119 +91,160 @@ def get_latest_crawl_parameter(keyword,media='blogs'):
 
 def get_blogs_news(keyword,streaming=True):
 
+    try:
+        if not os.path.exists(path):
+            os.makedirs(path)
 
-    if not os.path.exists(path):
-        os.makedirs(path)
+        webhoseio.config(token=blogs_key)
 
-    webhoseio.config(token=blogs_key)
+        if streaming:
+            latest_crawl_since = get_latest_crawl_parameter(keyword,media='blogs')
+        else:
+            latest_crawl_since = None
 
-    if streaming:
-        latest_crawl_since = get_latest_crawl_parameter(keyword,media='blogs')
-    else:
-        latest_crawl_since = None
+        prvs_crawl_since = -1
 
-    prvs_crawl_since = -1
-
-    count=0
-    results=[]    
-    with open(path+'/'+keyword+"_blogs_news_discussions_"+str(date_today) +'_'+ str(date_timestamp)+".json",'w') as fin:
-        while True:
-            try:
-                query_params = {
-                "q": 'thread.title: '+ keyword+ ', language:english',
-                "sort": "crawled",
-                "size" : 100,
-                "ts": latest_crawl_since,
-                }            
-                if prvs_crawl_since==latest_crawl_since:
-                    break
-                else:
-                    if count>5:
+        count=0
+        results=[]    
+        with open(path+'/'+keyword+"_blogs_news_discussions_"+str(date_today) +'_'+ str(date_timestamp)+".json",'w') as fin:
+            while True:
+                try:
+                    query_params = {
+                    "q": 'thread.title: '+ keyword+ ', language:english',
+                    "sort": "crawled",
+                    "size" : 100,
+                    "ts": latest_crawl_since,
+                    }            
+                    if prvs_crawl_since==latest_crawl_since:
                         break
-                    output = webhoseio.query("filterWebContent", query_params)
-                    prvs_crawl_since = latest_crawl_since
-                    if len(output['posts'])>0:
-                        logger.debug("Getting {} {}".format(count,len(output['posts'])))
-                        count+=1
-                        for post in output['posts']:
-                            try:
-                                json.dump(post,fin)
-                                fin.write('\n')
-                                results.append(post)
-                            except Exception as e:
-                                logger.warning("DUMPING TO FILE FAILED!! {} ".format(e))
-                        latest_crawl_since = datetime.datetime.timestamp(datetime.datetime.strptime(results[-1]['crawled'].split('.')[0],'%Y-%m-%dT%H:%M:%S'))
                     else:
-                        break
-            except Exception as e:
-                logger.warning("GETTING BLOGS FAILED!! {} ".format(e))
-                break
-    return results
+                        if count>5:
+                            break
+                        output = webhoseio.query("filterWebContent", query_params)
+                        prvs_crawl_since = latest_crawl_since
+                        if len(output['posts'])>0:
+                            print("Getting {} {}".format(count,len(output['posts'])))
+                            count+=1
+                            for post in output['posts']:
+                                try:
+                                    json.dump(post,fin)
+                                    fin.write('\n')
+                                    results.append(post)
+                                except Exception as e:
+                                    print("DUMPING TO FILE FAILED!! {} ".format(e))
+                            latest_crawl_since = datetime.datetime.timestamp(datetime.datetime.strptime(results[-1]['crawled'].split('.')[0],'%Y-%m-%dT%H:%M:%S'))
+                        else:
+                            break
+                except Exception as e:
+                    print("GETTING BLOGS FAILED!! {} ".format(e))
+                    break
+        return results
+    except Exception as e:
+        print("GET BLOGS EXCEPTION !!",e)
+        print('Error on line {}'.format(sys.exc_info()[-1].tb_lineno), type(e).__name__, e)
+        return
 
 
 def get_twitter(keyword,streaming=True):
 
+    try:
 
-    if not os.path.exists(path):
-        os.makedirs(path)
+        if not os.path.exists(path):
+            os.makedirs(path)
 
-    date_timestamp = str(datetime.datetime.today().timestamp()).split('.')[0]
-    
-    if streaming:
-        latest_crawl_since = get_latest_crawl_parameter(keyword, media='twitter')
-    else:
-        latest_crawl_since=None        
+        date_timestamp = str(datetime.datetime.today().timestamp()).split('.')[0]
         
-    master_results = []
-    prvs_crawl_since = -1
-    with open(path+'/'+keyword+"_twitter_"+str(date_today)+'_'+str(date_timestamp)+".json",'w') as fin:
+        if streaming:
+            latest_crawl_since = get_latest_crawl_parameter(keyword, media='twitter')
+        else:
+            latest_crawl_since=None        
+            
+        master_results = []
+        prvs_crawl_since = -1
+        with open(path+'/'+keyword+"_twitter_"+str(date_today)+'_'+str(date_timestamp)+".json",'w') as fin:
 
-        if not latest_crawl_since:
-            for i in range(10):
-                logger.debug('getting {}'.format((i+1)*100))
-                if prvs_crawl_since==latest_crawl_since:
-                    return master_results
-                else:
-                    results = api.GetSearch(keyword,count=100,result_type='recent',return_json=True,max_id=latest_crawl_since)
-                    if len(results['statuses'])>0:
-                        json.dump(results['statuses'],fin)
-                        master_results.extend(results['statuses'])
-                        fin.write('\n')
-                        prvs_crawl_since = latest_crawl_since
-                        latest_crawl_since = results['statuses'][-1]['id']
-                    else:
-                        break
-
-        else:        
-            results = api.GetSearch(keyword,count=100,result_type='recent',return_json=True,since_id=latest_crawl_since)
-            if len(results['statuses'])>0:
-                json.dump(results['statuses'],fin)
-                master_results.extend(results['statuses'])
-                fin.write('\n')
-
+            if not latest_crawl_since:
                 for i in range(10):
-                    try:
-                        logger.debug('2 getting {}'.format((i+1)*100))
-                        results = api.GetSearch(keyword,count=100,result_type='recent',return_json=True,since_id=results['statuses'][0]['id'])
+                    print('getting {}'.format((i+1)*100))
+                    if prvs_crawl_since==latest_crawl_since:
+                        return master_results
+                    else:
+                        results = api.GetSearch(keyword,count=100,result_type='recent',return_json=True,max_id=latest_crawl_since)
                         if len(results['statuses'])>0:
                             json.dump(results['statuses'],fin)
                             master_results.extend(results['statuses'])
                             fin.write('\n')
+                            prvs_crawl_since = latest_crawl_since
+                            latest_crawl_since = results['statuses'][-1]['id']
                         else:
                             break
-                    except Exception as e:
-                        if 'out of range' in str(e).lower():
-                            return master_results
-                        else:
-                            logger.warning("GETTING TWEETS FAILED!! RETRYING {} ".format(e))
-                            pass
-    return master_results
+
+            else:        
+                results = api.GetSearch(keyword,count=100,result_type='recent',return_json=True,since_id=latest_crawl_since)
+                if len(results['statuses'])>0:
+                    json.dump(results['statuses'],fin)
+                    master_results.extend(results['statuses'])
+                    fin.write('\n')
+
+                    for i in range(10):
+                        try:
+                            print('2 getting {}'.format((i+1)*100))
+                            results = api.GetSearch(keyword,count=100,result_type='recent',return_json=True,since_id=results['statuses'][0]['id'])
+                            if len(results['statuses'])>0:
+                                json.dump(results['statuses'],fin)
+                                master_results.extend(results['statuses'])
+                                fin.write('\n')
+                            else:
+                                break
+                        except Exception as e:
+                            if 'out of range' in str(e).lower():
+                                return master_results
+                            else:
+                                print("GETTING TWEETS FAILED!! RETRYING {} ".format(e))
+                                pass
+        return master_results
+    except Exception as e:
+        print("GET TWITTER EXCEPTION !!",e)
+        print('Error on line {}'.format(sys.exc_info()[-1].tb_lineno), type(e).__name__, e)
+        return
 
 
+def get_articles(keyword,source,page_limit=4):
+    service = getService()
+    startIndex = 1
+    response = []
+    q = '"'+keyword+'"'
+    
+    if source=='google':
+        site = ''
+    else:
+        site = source+".com"
+    
+    with open(path+'/'+keyword+"_"+source+'_'+str(date_today)+".json",'w') as fin:
+
+        for nPage in range(0, page_limit):
+            try:
+                print ("Reading page number {} for {}:".format(nPage+1,source))
+
+                result = service.cse().list(
+                    q=q, #Search words
+                    cx='001132580745589424302:jbscnf14_dw',  #CSE Key
+                    lr='lang_en', #Search language
+                    siteSearch=site,
+                    start=startIndex,
+                    sort = 'date'
+                ).execute()
+                
+                startIndex = result.get("queries").get("nextPage")[0].get("startIndex")
+                json.dump(result['items'],fin)
+                fin.write('\n')
+                
+            except Exception as e:
+                print(e)
+                return
+    return
 
 def Master_blogs_function(keyword):
-
-    tmp_blogs = get_blogs_news(keyword)
 
     try:
         blogs_done_files=[]
@@ -242,15 +278,15 @@ def Master_blogs_function(keyword):
     t1 = time.time()
     cleaned_results = []
     blogs_multiprocess_pool = [p.apply_async(get_post_info, [i]) for i in blogs_news]
-    logger.info("PROCESSING BLOGS....")
+    print("PROCESSING BLOGS....")
     for i,result in enumerate(blogs_multiprocess_pool):
         try:
             output = result.get()
             output['keyword'] = keyword
             cleaned_results.append(output)
         except Exception as e:
-            logger.warning("BLOGS EXCEPTION!! {}".format(e))
-            logger.warning('Error on line {}'.format(sys.exc_info()[-1].tb_lineno), type(e).__name__, e)
+            print("BLOGS EXCEPTION!! {}".format(e))
+            print('Error on line {}'.format(sys.exc_info()[-1].tb_lineno), type(e).__name__, e)
             pass
 
     return cleaned_results
@@ -258,8 +294,6 @@ def Master_blogs_function(keyword):
 
 def Master_twitter_function(keyword):
 #### Twitter
-    
-    results = get_twitter(keyword)
 
     try:
         twitter_done_files=[]
@@ -298,7 +332,7 @@ def Master_twitter_function(keyword):
     tweets = [tweet for tweet in sum(twitter,[])]
 
 
-    logger.info("PROCESSING TWEETS....")
+    print("PROCESSING TWEETS....")
     tweets_multiprocess_pool = [p.apply_async(get_tweet_info, [i]) for i in tweets]
 
     for i,result in enumerate(tweets_multiprocess_pool):
@@ -307,11 +341,81 @@ def Master_twitter_function(keyword):
             output['keyword'] = keyword
             cleaned_twitter.append(output)
         except Exception as e:
-            logger.warning("TWITTER EXCEPTION!! {} ".format(e))
-            logger.warning('Error on line {}'.format(sys.exc_info()[-1].tb_lineno), type(e).__name__, e)
+            print("TWITTER EXCEPTION!! {} ".format(e))
+            print('Error on line {}'.format(sys.exc_info()[-1].tb_lineno), type(e).__name__, e)
             pass
 
     return cleaned_twitter
+
+
+def Master_google_function(keyword,source):
+
+
+    goog_yout_pint=[]
+    with open(path+'/'+keyword+"_"+source+'_'+str(date_today)+".json") as fin:
+        for line in fin:
+            goog_yout_pint.extend(json.loads(line))
+
+
+
+    # Process Google, Youtube, Pinterest
+    t1 = time.time()
+    cleaned_results = []
+    goog_yout_pint_multiprocess_pool = [p.apply_async(get_articles_info, [(i,source)]) for i in goog_yout_pint]
+    
+    
+    print("PROCESSING {}....".format(source))
+    
+    for i,result in enumerate(goog_yout_pint_multiprocess_pool):
+        try:
+            output = result.get()
+            output['keyword'] = keyword
+            cleaned_results.append(output)
+        except Exception as e:
+            print("{} EXCEPTION!! {}".format(source, e))
+            print('MAIN ERROR on line {}'.format(sys.exc_info()[-1].tb_lineno), type(e).__name__, e)
+            pass
+
+    return cleaned_results
+
+
+def get_social_search_results(keyword_tuple):
+    
+    global path
+    global date_today
+    global date_timestamp
+
+    keyword,source = keyword_tuple[0]
+    path = keyword_tuple[1]
+    date_today = keyword_tuple[2]
+    date_timestamp = keyword_tuple[3]
+
+    if source=='blogs':
+        tmp_articles = get_blogs_news(keyword)
+    elif source=='twitter':
+        tmp_articles = get_twitter(keyword)
+    else:
+        tmp_articles = get_articles(keyword,source)
+        
+    return
+
+def search_social_media(search_inputs):
+
+    social_media_multiprocess_pool = [p.apply_async(get_social_search_results, [(i,path,date_today,date_timestamp)]) for i in search_inputs]
+    for i,result in enumerate(social_media_multiprocess_pool):
+        try:
+            output = result.get()
+        except Exception as e:
+            print("SEARCH EXCEPTION!! {}".format(e))
+            pass
+    return None
+
+
+num_processes = 6
+def pool_init():  
+    gc.collect()
+
+p = Pool(initializer=pool_init, processes = num_processes)
 
 
 
@@ -338,15 +442,22 @@ def run_social_listening_without_monitoring():
     date_today = datetime.datetime.today().date()
     date_timestamp = str(datetime.datetime.today().timestamp()).split('.')[0]
 
-
-
     path = "tmp/"+keyword+'/'+str(date_today)
 
+    search_inputs = [(keyword,'blogs'),(keyword,'twitter'),(keyword,'youtube'),(keyword,'pinterest'),(keyword,'reddit'),(keyword,'google')]
 
-    cleaned_results = Master_blogs_function(keyword)
+    search_social_media(search_inputs)
+    # for i in search_inputs:
+    #     get_social_search_results(i)
+
+    cleaned_blogs = Master_blogs_function(keyword)
     cleaned_twitter = Master_twitter_function(keyword)
+    cleaned_pinterest = Master_google_function(keyword,'pinterest')
+    cleaned_youtube = Master_google_function(keyword,'youtube')
+    cleaned_reddit = Master_google_function(keyword,'reddit')
+    cleaned_google = Master_google_function(keyword,'google')
 
-    final_result = cleaned_results+cleaned_twitter
+    final_result = cleaned_blogs+cleaned_twitter+cleaned_pinterest+cleaned_youtube+cleaned_reddit+cleaned_google
     final_df = pd.DataFrame(final_result)
 
     final_df.to_csv(path+'/'+keyword+"_all_social_media_"+str(date_today)+".csv",index=False,mode='a')
