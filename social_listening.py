@@ -68,113 +68,122 @@ def get_latest_crawl_parameter(keyword,media='blogs'):
 
 def get_blogs_news(keyword,streaming=True):
 
+    try:
+        if not os.path.exists(path):
+            os.makedirs(path)
 
-    if not os.path.exists(path):
-        os.makedirs(path)
+        webhoseio.config(token=blogs_key)
 
-    webhoseio.config(token=blogs_key)
+        if streaming:
+            latest_crawl_since = get_latest_crawl_parameter(keyword,media='blogs')
+        else:
+            latest_crawl_since = None
 
-    if streaming:
-        latest_crawl_since = get_latest_crawl_parameter(keyword,media='blogs')
-    else:
-        latest_crawl_since = None
+        prvs_crawl_since = -1
 
-    prvs_crawl_since = -1
-
-    count=0
-    results=[]    
-    with open(path+'/'+keyword+"_blogs_news_discussions_"+str(date_today) +'_'+ str(date_timestamp)+".json",'w') as fin:
-        while True:
-            try:
-                query_params = {
-                "q": 'thread.title: '+ keyword+ ', language:english',
-                "sort": "crawled",
-                "size" : 100,
-                "ts": latest_crawl_since,
-                }            
-                if prvs_crawl_since==latest_crawl_since:
-                    break
-                else:
-                    if count>5:
+        count=0
+        results=[]    
+        with open(path+'/'+keyword+"_blogs_news_discussions_"+str(date_today) +'_'+ str(date_timestamp)+".json",'w') as fin:
+            while True:
+                try:
+                    query_params = {
+                    "q": 'thread.title: '+ keyword+ ', language:english',
+                    "sort": "crawled",
+                    "size" : 100,
+                    "ts": latest_crawl_since,
+                    }            
+                    if prvs_crawl_since==latest_crawl_since:
                         break
-                    output = webhoseio.query("filterWebContent", query_params)
-                    prvs_crawl_since = latest_crawl_since
-                    if len(output['posts'])>0:
-                        print("Getting {} {}".format(count,len(output['posts'])))
-                        count+=1
-                        for post in output['posts']:
-                            try:
-                                json.dump(post,fin)
-                                fin.write('\n')
-                                results.append(post)
-                            except Exception as e:
-                                print("DUMPING TO FILE FAILED!! {} ".format(e))
-                        latest_crawl_since = datetime.datetime.timestamp(datetime.datetime.strptime(results[-1]['crawled'].split('.')[0],'%Y-%m-%dT%H:%M:%S'))
                     else:
-                        break
-            except Exception as e:
-                print("GETTING BLOGS FAILED!! {} ".format(e))
-                break
-    return results
+                        if count>5:
+                            break
+                        output = webhoseio.query("filterWebContent", query_params)
+                        prvs_crawl_since = latest_crawl_since
+                        if len(output['posts'])>0:
+                            print("Getting {} {}".format(count,len(output['posts'])))
+                            count+=1
+                            for post in output['posts']:
+                                try:
+                                    json.dump(post,fin)
+                                    fin.write('\n')
+                                    results.append(post)
+                                except Exception as e:
+                                    print("DUMPING TO FILE FAILED!! {} ".format(e))
+                            latest_crawl_since = datetime.datetime.timestamp(datetime.datetime.strptime(results[-1]['crawled'].split('.')[0],'%Y-%m-%dT%H:%M:%S'))
+                        else:
+                            break
+                except Exception as e:
+                    print("GETTING BLOGS FAILED!! {} ".format(e))
+                    break
+        return results
+    except Exception as e:
+        print("GET BLOGS EXCEPTION !!",e)
+        print('Error on line {}'.format(sys.exc_info()[-1].tb_lineno), type(e).__name__, e)
+        return
 
 
 def get_twitter(keyword,streaming=True):
 
+    try:
 
-    if not os.path.exists(path):
-        os.makedirs(path)
+        if not os.path.exists(path):
+            os.makedirs(path)
 
-    date_timestamp = str(datetime.datetime.today().timestamp()).split('.')[0]
-    
-    if streaming:
-        latest_crawl_since = get_latest_crawl_parameter(keyword, media='twitter')
-    else:
-        latest_crawl_since=None        
+        date_timestamp = str(datetime.datetime.today().timestamp()).split('.')[0]
         
-    master_results = []
-    prvs_crawl_since = -1
-    with open(path+'/'+keyword+"_twitter_"+str(date_today)+'_'+str(date_timestamp)+".json",'w') as fin:
+        if streaming:
+            latest_crawl_since = get_latest_crawl_parameter(keyword, media='twitter')
+        else:
+            latest_crawl_since=None        
+            
+        master_results = []
+        prvs_crawl_since = -1
+        with open(path+'/'+keyword+"_twitter_"+str(date_today)+'_'+str(date_timestamp)+".json",'w') as fin:
 
-        if not latest_crawl_since:
-            for i in range(10):
-                print('getting {}'.format((i+1)*100))
-                if prvs_crawl_since==latest_crawl_since:
-                    return master_results
-                else:
-                    results = api.GetSearch(keyword,count=100,result_type='recent',return_json=True,max_id=latest_crawl_since)
-                    if len(results['statuses'])>0:
-                        json.dump(results['statuses'],fin)
-                        master_results.extend(results['statuses'])
-                        fin.write('\n')
-                        prvs_crawl_since = latest_crawl_since
-                        latest_crawl_since = results['statuses'][-1]['id']
-                    else:
-                        break
-
-        else:        
-            results = api.GetSearch(keyword,count=100,result_type='recent',return_json=True,since_id=latest_crawl_since)
-            if len(results['statuses'])>0:
-                json.dump(results['statuses'],fin)
-                master_results.extend(results['statuses'])
-                fin.write('\n')
-
+            if not latest_crawl_since:
                 for i in range(10):
-                    try:
-                        print('2 getting {}'.format((i+1)*100))
-                        results = api.GetSearch(keyword,count=100,result_type='recent',return_json=True,since_id=results['statuses'][0]['id'])
+                    print('getting {}'.format((i+1)*100))
+                    if prvs_crawl_since==latest_crawl_since:
+                        return master_results
+                    else:
+                        results = api.GetSearch(keyword,count=100,result_type='recent',return_json=True,max_id=latest_crawl_since)
                         if len(results['statuses'])>0:
                             json.dump(results['statuses'],fin)
                             master_results.extend(results['statuses'])
                             fin.write('\n')
+                            prvs_crawl_since = latest_crawl_since
+                            latest_crawl_since = results['statuses'][-1]['id']
                         else:
                             break
-                    except Exception as e:
-                        if 'out of range' in str(e).lower():
-                            return master_results
-                        else:
-                            print("GETTING TWEETS FAILED!! RETRYING {} ".format(e))
-                            pass
-    return master_results
+
+            else:        
+                results = api.GetSearch(keyword,count=100,result_type='recent',return_json=True,since_id=latest_crawl_since)
+                if len(results['statuses'])>0:
+                    json.dump(results['statuses'],fin)
+                    master_results.extend(results['statuses'])
+                    fin.write('\n')
+
+                    for i in range(10):
+                        try:
+                            print('2 getting {}'.format((i+1)*100))
+                            results = api.GetSearch(keyword,count=100,result_type='recent',return_json=True,since_id=results['statuses'][0]['id'])
+                            if len(results['statuses'])>0:
+                                json.dump(results['statuses'],fin)
+                                master_results.extend(results['statuses'])
+                                fin.write('\n')
+                            else:
+                                break
+                        except Exception as e:
+                            if 'out of range' in str(e).lower():
+                                return master_results
+                            else:
+                                print("GETTING TWEETS FAILED!! RETRYING {} ".format(e))
+                                pass
+        return master_results
+    except Exception as e:
+        print("GET TWITTER EXCEPTION !!",e)
+        print('Error on line {}'.format(sys.exc_info()[-1].tb_lineno), type(e).__name__, e)
+        return
 
 
 def get_articles(keyword,source,page_limit=1):
