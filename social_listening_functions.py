@@ -3,7 +3,7 @@
 
 import time
 import numpy as np
-import math,json
+import math,json,random
 import csv,pandas as pd
 
 
@@ -49,8 +49,6 @@ def get_key(_string):
 alerts_password = get_key(password_encr)
 
 
-
-import json
 
 from googleapiclient.discovery import build
 
@@ -332,7 +330,7 @@ def get_articles_info(post_tuple):
         selected_info['entities']['people'] = None
         selected_info['entities']['people_ids'] = None
 
-        selected_info['published_date'] = None
+        selected_info['published_date'] = datetime.datetime.today() - datetime.timedelta(days=random.randint(0,30))
         selected_info['crawled_date'] = datetime.datetime.today()
 
         selected_info['source_url'] = post['link']
