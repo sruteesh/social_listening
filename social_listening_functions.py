@@ -217,6 +217,7 @@ def get_post_info(post):
         result['post_metrics']['num_likes'] = output_thread['participants_count']
         result['location']['country'] = countries_dict.get(output_thread['country'], output_thread['country']).lower()
         result['geo_coordinates'] = get_location_coords(result['location']['country'])
+        print("blogs", post['language'].lower())
         result['language'] = post['language'].lower()
         
         result['text']['text'] = [post['text'] if post['text']!='' else None][0]
@@ -270,6 +271,7 @@ def get_tweet_info(tweet):
         selected_info['post_metrics']['num_likes'] = tweet['favorite_count']
         selected_info['post_metrics']['num_shares'] = tweet['retweet_count']
         selected_info['post_metrics']['num_comments'] = None
+        print("twitter", language_dict.get(tweet['lang'],tweet['lang']).lower(), tweet['lang'])
         selected_info['language'] = language_dict.get(tweet['lang'],tweet['lang']).lower()
         
         if tweet['place'] is not None:
@@ -318,7 +320,7 @@ def get_articles_info(post_tuple):
         selected_info['post_metrics']['num_likes'] = None
         selected_info['post_metrics']['num_shares'] = None
         selected_info['post_metrics']['num_comments'] = None
-        selected_info['language'] = 'en'
+        selected_info['language'] = 'english'
         selected_info['location']['city'] = None
         selected_info['location']['country'] = None
         selected_info['user']['vintage'] = None

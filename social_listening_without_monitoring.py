@@ -149,8 +149,8 @@ def get_twitter(keyword,streaming=True):
 
     try:
 
-        if not os.path.exists(path):
-            os.makedirs(path)
+#         if not os.path.exists(path):
+#             os.makedirs(path)
 
         date_timestamp = str(datetime.datetime.today().timestamp()).split('.')[0]
         
@@ -469,7 +469,27 @@ def run_social_listening_without_monitoring():
         print(e)
         return handle_exceptions(message="Problem in Building Dashboard",response_code=430)
 
-    return jsonify(response="Dashboard Built", url = "http://185.90.51.142:5601/app/kibana#/dashboard/da377110-85ed-11e8-90af-4bd679e81972?_g=(refreshInterval:(display:Off,pause:!f,value:0),time:(from:now-30d,mode:quick,to:now))&_a=(description:'',filters:!(('$state':(store:appState),meta:(alias:!n,disabled:!f,index:social_listening_tmp_v1,key:keyword.keyword,negate:!f,params:(query:{},type:phrase),type:phrase,value:{}),query:(match:(keyword.keyword:(query:{},type:phrase))))),fullScreenMode:!f,options:(darkTheme:!f,hidePanelTitles:!f,useMargins:!t),panels:!((embeddableConfig:(),gridData:(h:19,i:'2',w:24,x:24,y:79),id:e683db90-85eb-11e8-90af-4bd679e81972,panelIndex:'2',type:visualization,version:'6.3.0'),(embeddableConfig:(),gridData:(h:9,i:'3',w:48,x:0,y:7),id:add29cf0-85eb-11e8-90af-4bd679e81972,panelIndex:'3',type:visualization,version:'6.3.0'),(embeddableConfig:(vis:(legendOpen:!f)),gridData:(h:19,i:'4',w:24,x:0,y:79),id:'91dd0530-85eb-11e8-90af-4bd679e81972',panelIndex:'4',type:visualization,version:'6.3.0'),(embeddableConfig:(vis:(legendOpen:!t)),gridData:(h:15,i:'5',w:17,x:31,y:24),id:'3fd5f510-85ed-11e8-90af-4bd679e81972',panelIndex:'5',type:visualization,version:'6.3.0'),(embeddableConfig:(),gridData:(h:8,i:'6',w:48,x:0,y:16),id:'3fb03a10-85ec-11e8-90af-4bd679e81972',panelIndex:'6',type:visualization,version:'6.3.0'),(embeddableConfig:(),gridData:(h:21,i:'7',w:24,x:24,y:98),id:'006ba1f0-85ec-11e8-90af-4bd679e81972',panelIndex:'7',type:visualization,version:'6.3.0'),(embeddableConfig:(),gridData:(h:15,i:'8',w:48,x:0,y:119),id:'1b9d9b90-85ec-11e8-90af-4bd679e81972',panelIndex:'8',type:visualization,version:'6.3.0'),(embeddableConfig:(vis:(legendOpen:!f)),gridData:(h:15,i:'9',w:31,x:0,y:24),id:cb9d1bc0-85eb-11e8-90af-4bd679e81972,panelIndex:'9',type:visualization,version:'6.3.0'),(embeddableConfig:(mapCenter:!(38.82259097617713,14.062500000000002),mapZoom:2),gridData:(h:22,i:'10',w:48,x:0,y:57),id:cb69c3d0-85f8-11e8-90af-4bd679e81972,panelIndex:'10',type:visualization,version:'6.3.0'),(embeddableConfig:(vis:(legendOpen:!f)),gridData:(h:21,i:'11',w:24,x:0,y:98),id:cc121710-845e-11e8-ba2e-69a0a3013ee4,panelIndex:'11',type:visualization,version:'6.3.0'),(embeddableConfig:(),gridData:(h:18,i:'12',w:48,x:0,y:39),id:b4c6e490-89f0-11e8-90af-4bd679e81972,panelIndex:'12',type:visualization,version:'6.3.0'),(embeddableConfig:(),gridData:(h:7,i:'13',w:48,x:0,y:0),id:'783916b0-5287-11e8-8ab0-3f731bc5c361',panelIndex:'13',type:visualization,version:'6.3.0')),query:(language:lucene,query:''),timeRestore:!t,title:social_media_tmp,viewMode:view)".format(keyword,keyword,keyword))
+    dashboard_url = """
+<iframe src="http://185.90.51.142:5601/app/kibana#/dashboard/da377110-85ed-11e8-90af-4bd679e81972?embed=true&_g=(refreshInterval:(display:Off,pause:!f,value:0),time:(from:now-30d,mode:quick,to:now))&_a=(description:'',filters:!(('$state':(store:appState),meta:(alias:!n,disabled:!f,index:social_listening_tmp_v1,key:keyword.keyword,negate:!f,params:(query:{},type:phrase),type:phrase,value:{}),query:(match:(keyword.keyword:(query:{},type:phrase))))),fullScreenMode:!t,options:(darkTheme:!f,hidePanelTitles:!f,useMargins:!t),panels:!((embeddableConfig:(),gridData:(h:19,i:'2',w:24,x:24,y:79),id:e683db90-85eb-11e8-90af-4bd679e81972,panelIndex:'2',type:visualization,version:'6.3.0'),(embeddableConfig:(),gridData:(h:9,i:'3',w:48,x:0,y:7),id:add29cf0-85eb-11e8-90af-4bd679e81972,panelIndex:'3',type:visualization,version:'6.3.0'),(embeddableConfig:(vis:(legendOpen:!f)),gridData:(h:19,i:'4',w:24,x:0,y:79),id:'91dd0530-85eb-11e8-90af-4bd679e81972',panelIndex:'4',type:visualization,version:'6.3.0'),(embeddableConfig:(vis:(legendOpen:!t)),gridData:(h:15,i:'5',w:17,x:31,y:24),id:'3fd5f510-85ed-11e8-90af-4bd679e81972',panelIndex:'5',type:visualization,version:'6.3.0'),(embeddableConfig:(),gridData:(h:8,i:'6',w:48,x:0,y:16),id:'3fb03a10-85ec-11e8-90af-4bd679e81972',panelIndex:'6',type:visualization,version:'6.3.0'),(embeddableConfig:(),gridData:(h:21,i:'7',w:24,x:24,y:98),id:'006ba1f0-85ec-11e8-90af-4bd679e81972',panelIndex:'7',type:visualization,version:'6.3.0'),(embeddableConfig:(),gridData:(h:15,i:'8',w:48,x:0,y:119),id:'1b9d9b90-85ec-11e8-90af-4bd679e81972',panelIndex:'8',type:visualization,version:'6.3.0'),(embeddableConfig:(vis:(legendOpen:!f)),gridData:(h:15,i:'9',w:31,x:0,y:24),id:cb9d1bc0-85eb-11e8-90af-4bd679e81972,panelIndex:'9',type:visualization,version:'6.3.0'),(embeddableConfig:(mapCenter:!(38.82259097617713,14.062500000000002),mapZoom:2),gridData:(h:22,i:'10',w:48,x:0,y:57),id:cb69c3d0-85f8-11e8-90af-4bd679e81972,panelIndex:'10',type:visualization,version:'6.3.0'),(embeddableConfig:(vis:(legendOpen:!f)),gridData:(h:21,i:'11',w:24,x:0,y:98),id:cc121710-845e-11e8-ba2e-69a0a3013ee4,panelIndex:'11',type:visualization,version:'6.3.0'),(embeddableConfig:(),gridData:(h:18,i:'12',w:48,x:0,y:39),id:b4c6e490-89f0-11e8-90af-4bd679e81972,panelIndex:'12',type:visualization,version:'6.3.0'),(embeddableConfig:(),gridData:(h:7,i:'13',w:48,x:0,y:0),id:'783916b0-5287-11e8-8ab0-3f731bc5c361',panelIndex:'13',type:visualization,version:'6.3.0')),query:(language:lucene,query:''),timeRestore:!t,title:social_media_tmp,viewMode:view)"></iframe>
+""".format(keyword,keyword,keyword)
+    
+    lines = [
+'<!DOCTYPE html>',
+'<html>',
+'<style type="text/css">',
+'html, body { margin: 0; padding 0; width: 100%; height: 100%;}',
+'iframe { border: 0; width: 100%; height: 99%; }'
+'</style>',
+'<body>',
+dashboard_url,
+'</body>',
+'</html>']
+    
+    with open("/home/kritonis/public_html/social_listening_dashboard/dashboard/dashboard.html",'w') as fin:
+        for line in lines:
+            fin.write(line+'\n')
+    
+    return jsonify(response="Dashboard Built", url = "http://kritonis.com/social_listening_dashboard/dashboard/dashboard.html")
 
 
 @app.after_request
