@@ -30,6 +30,12 @@ global path
 
 import logging
 
+from nltk.sentiment.vader import SentimentIntensityAnalyzer
+from nltk.tokenize import word_tokenize
+# from textblob import TextBlob
+import io
+
+
 api = twitter.Api(consumer_key=twitter_app_key,
                   consumer_secret=twitter_app_secret,
                   access_token_key=twitter_access_token,
@@ -58,6 +64,11 @@ def getService():
 
     return service
 
+
+analyzer = SentimentIntensityAnalyzer()
+def get_sentiment(post):
+    snt = analyzer.polarity_scores(post)['compound']
+    return snt
 
 # from multiprocessing import Process,Manager
 
@@ -226,6 +237,8 @@ def get_post_info(post):
         result['text']['text_tokens'] = get_post_tokens(result['text']['cleaned_text'])
         result['text']['text_type'] = None
         
+        result['sentiment'] = get_sentiment(result['text']['text'])
+
         result['entities']['people'] = [i['name'].lower() for i in post['entities']['persons']]
         result['entities']['organizations'] = [i['name'].lower() for i in post['entities']['organizations']]
         result['entities']['hashtags'] = re.findall("#(\w+)",str(result['text']['text']).lower())
@@ -289,6 +302,7 @@ def get_tweet_info(tweet):
         selected_info['text']['title'] = [tweet['text'] if tweet['text']!='' else None][0]
     #     selected_info['text']['text_type'] = get_flag(tweet)
 
+        selected_info['sentiment'] = get_sentiment(selected_info['text']['text'])
 
         selected_info['user']['name'] = tweet['user']['name'].lower()
         selected_info['user']['vintage'] = tweet['user']['created_at']
@@ -340,6 +354,8 @@ def get_articles_info(post_tuple):
         selected_info['text']['cleaned_text'] = get_clean_tweet(selected_info['text']['text'])
         selected_info['text']['text_tokens'] = get_post_tokens(selected_info['text']['cleaned_text'] )
         selected_info['text']['title'] = post['title']
+
+        selected_info['sentiment'] = get_sentiment(selected_info['text']['text'])
 
         if 'pinterest' in source:
             selected_info['source_category'] = 'pinterest'
