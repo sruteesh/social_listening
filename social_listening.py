@@ -126,8 +126,8 @@ def get_twitter(keyword,streaming=True):
 
     try:
 
-        if not os.path.exists(path):
-            os.makedirs(path)
+#         if not os.path.exists(path):
+#             os.makedirs(path)
 
         date_timestamp = str(datetime.datetime.today().timestamp()).split('.')[0]
         
@@ -357,7 +357,7 @@ def Master_google_function(keyword,source):
 
 def Upload_to_kibana(data):
 
-    es = Elasticsearch(host)
+    es = Elasticsearch(host, http_auth=('elastic', 'password'))
 
     # try :
     #    es.indices.delete(index=index_name, ignore=[400, 404])
@@ -489,25 +489,21 @@ def run_social_listening():
 
     
     dashboard_url = """
-<iframe src="http://185.90.51.142:5601/app/kibana#/dashboard/0ac89420-5287-11e8-8ab0-3f731bc5c361?embed=true&_g=(refreshInterval:(display:Off,pause:!f,value:0),time:(from:now-30d,mode:quick,to:now))&_a=(description:'',filters:!(('$state':(store:appState),meta:(alias:!n,disabled:!f,index:'663c8a20-8115-11e8-ba2e-69a0a3013ee4',key:keyword.keyword,negate:!f,params:(query:{},type:phrase),type:phrase,value:{}),query:(match:(keyword.keyword:(query:{},type:phrase))))),fullScreenMode:!f,options:(darkTheme:!f,hidePanelTitles:!f,useMargins:!t),panels:!((gridData:(h:20,i:'1',w:48,x:0,y:24),id:'07b340d0-5266-11e8-bada-23eb8c6d65ff',panelIndex:'1',type:visualization,version:'6.3.0'),(gridData:(h:8,i:'2',w:48,x:0,y:16),id:c2c82ac0-5266-11e8-bada-23eb8c6d65ff,panelIndex:'2',type:visualization,version:'6.3.0'),(gridData:(h:23,i:'5',w:29,x:0,y:74),id:e191b1f0-5285-11e8-8ab0-3f731bc5c361,panelIndex:'5',type:visualization,version:'6.3.0'),(embeddableConfig:(vis:(legendOpen:!f)),gridData:(h:15,i:'6',w:32,x:0,y:59),id:'35836920-5286-11e8-8ab0-3f731bc5c361',panelIndex:'6',type:visualization,version:'6.3.0'),(gridData:(h:19,i:'7',w:29,x:0,y:97),id:b9233360-5285-11e8-8ab0-3f731bc5c361,panelIndex:'7',type:visualization,version:'6.3.0'),(gridData:(h:15,i:'8',w:16,x:32,y:59),id:'74e71770-5285-11e8-8ab0-3f731bc5c361',panelIndex:'8',type:visualization,version:'6.3.0'),(embeddableConfig:(vis:(legendOpen:!f)),gridData:(h:23,i:'9',w:19,x:29,y:74),id:'628886d0-5286-11e8-8ab0-3f731bc5c361',panelIndex:'9',type:visualization,version:'6.3.0'),(embeddableConfig:(vis:(legendOpen:!f)),gridData:(h:19,i:'10',w:19,x:29,y:97),id:'0d23deb0-5286-11e8-8ab0-3f731bc5c361',panelIndex:'10',type:visualization,version:'6.3.0'),(gridData:(h:7,i:'11',w:48,x:0,y:0),id:'783916b0-5287-11e8-8ab0-3f731bc5c361',panelIndex:'11',type:visualization,version:'6.3.0'),(embeddableConfig:(vis:(params:(sort:(columnIndex:0,direction:desc)))),gridData:(h:15,i:'12',w:48,x:0,y:44),id:'17ba7cb0-85e6-11e8-ba2e-69a0a3013ee4',panelIndex:'12',type:visualization,version:'6.3.0'),(embeddableConfig:(),gridData:(h:9,i:'13',w:48,x:0,y:7),id:'871fdd10-8407-11e8-ba2e-69a0a3013ee4',panelIndex:'13',type:visualization,version:'6.3.0')),query:(language:lucene,query:''),timeRestore:!t,title:social_media_analysis,viewMode:view)"></iframe>
+<iframe src="http://185.90.51.142:5601/app/kibana#/dashboard/0ac89420-5287-11e8-8ab0-3f731bc5c361?_g=(refreshInterval:(display:Off,pause:!f,value:0),time:(from:now-30d,mode:quick,to:now))&_a=(description:'',filters:!(('$state':(store:appState),meta:(alias:!n,disabled:!f,index:'663c8a20-8115-11e8-ba2e-69a0a3013ee4',key:keyword.keyword,negate:!f,params:(query:{},type:phrase),type:phrase,value:{}),query:(match:(keyword.keyword:(query:{},type:phrase))))),fullScreenMode:!f,options:(darkTheme:!f,hidePanelTitles:!f,useMargins:!t),panels:!((gridData:(h:20,i:'1',w:48,x:0,y:24),id:'07b340d0-5266-11e8-bada-23eb8c6d65ff',panelIndex:'1',type:visualization,version:'6.3.0'),(gridData:(h:8,i:'2',w:48,x:0,y:16),id:c2c82ac0-5266-11e8-bada-23eb8c6d65ff,panelIndex:'2',type:visualization,version:'6.3.0'),(gridData:(h:23,i:'5',w:29,x:0,y:74),id:e191b1f0-5285-11e8-8ab0-3f731bc5c361,panelIndex:'5',type:visualization,version:'6.3.0'),(embeddableConfig:(vis:(legendOpen:!f)),gridData:(h:15,i:'6',w:32,x:0,y:59),id:'35836920-5286-11e8-8ab0-3f731bc5c361',panelIndex:'6',type:visualization,version:'6.3.0'),(gridData:(h:19,i:'7',w:29,x:0,y:97),id:b9233360-5285-11e8-8ab0-3f731bc5c361,panelIndex:'7',type:visualization,version:'6.3.0'),(gridData:(h:15,i:'8',w:16,x:32,y:59),id:'74e71770-5285-11e8-8ab0-3f731bc5c361',panelIndex:'8',type:visualization,version:'6.3.0'),(embeddableConfig:(vis:(legendOpen:!f)),gridData:(h:23,i:'9',w:19,x:29,y:74),id:'628886d0-5286-11e8-8ab0-3f731bc5c361',panelIndex:'9',type:visualization,version:'6.3.0'),(embeddableConfig:(vis:(legendOpen:!f)),gridData:(h:19,i:'10',w:19,x:29,y:97),id:'0d23deb0-5286-11e8-8ab0-3f731bc5c361',panelIndex:'10',type:visualization,version:'6.3.0'),(gridData:(h:7,i:'11',w:48,x:0,y:0),id:'783916b0-5287-11e8-8ab0-3f731bc5c361',panelIndex:'11',type:visualization,version:'6.3.0'),(embeddableConfig:(vis:(params:(sort:(columnIndex:0,direction:desc)))),gridData:(h:15,i:'12',w:48,x:0,y:44),id:'17ba7cb0-85e6-11e8-ba2e-69a0a3013ee4',panelIndex:'12',type:visualization,version:'6.3.0'),(embeddableConfig:(),gridData:(h:9,i:'13',w:48,x:0,y:7),id:'871fdd10-8407-11e8-ba2e-69a0a3013ee4',panelIndex:'13',type:visualization,version:'6.3.0')),query:(language:lucene,query:''),timeRestore:!t,title:social_media_analysis,viewMode:view)"></iframe>
 """.format(keyword,keyword,keyword)
     
     
-    lines = [
-'<!DOCTYPE html>',
-'<html>',
-'<style type="text/css">',
-'html, body { margin: 0; padding 0; width: 100%; height: 100%;}',
-'iframe { border: 0; width: 100%; height: 99%; }'
-'</style>',
-'<body>',
-dashboard_url,
-'</body>',
-'</html>']
-    
-    with open("/home/kritonis/public_html/social_listening_dashboard/dashboard/dashboard.html",'w') as fin:
-        for line in lines:
-            fin.write(line+'\n')
+    dashboard_past= []
+    with open("/home/kritonis/public_html/social_listening_dashboard/dashboard/dashboard.html",'r') as fread:
+            for line in fread:
+                dashboard_past.append(line)
+                
+    with open("/home/kritonis/public_html/social_listening_dashboard/dashboard/dashboard.html",'w') as fwrite:
+        for line in dashboard_past:
+            if '<iframe' in line:
+                fwrite.write(dashboard_url)
+            else:
+                fwrite.write(line) 
             
     return jsonify(response="Dashboard Built", url = "http://kritonis.com/social_listening_dashboard/dashboard/dashboard.html")
 
